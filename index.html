@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>บันทึกการปฏิบัติ</title>
+<style>
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:-apple-system,"Segoe UI","Sarabun",sans-serif; background:#f4f6f8;
+    margin:0; padding:14px; display:flex; justify-content:center; color:#1f2d3d; }
+  .card { background:#fff; width:100%; max-width:440px; border-radius:16px;
+    padding:20px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+  h1 { font-size:18px; margin:0 0 14px; }
+  h2 { font-size:15px; margin:0 0 10px; }
+  h3 { font-size:13px; margin:18px 0 8px; color:#52606d; font-weight:600; }
+  /* ---- tabs (เลื่อน + ลากสลับตำแหน่ง) ---- */
+  .tabs { display:flex; gap:4px; margin-bottom:16px; background:#f1f4f6; padding:4px;
+    border-radius:10px; overflow-x:auto; overflow-y:hidden; white-space:nowrap;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tabs.dragging { touch-action:none; overflow-x:hidden; }
+  .tabs button { flex:0 0 auto; border:0; background:transparent; padding:9px 14px; border-radius:7px;
+    font-size:13px; color:#52606d; cursor:grab; font-family:inherit; touch-action:pan-x;
+    user-select:none; transition:background .15s,color .15s; }
+  .tabs button.on { background:#fff; color:#1a7f43; font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .tabs button.drag { background:#fff; color:#1a7f43; box-shadow:0 5px 16px rgba(0,0,0,.22);
+    position:relative; z-index:9; transition:none; cursor:grabbing; }
+  .page { display:none; } .page.on { display:block; }
+  .head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
+  .date { font-size:13px; color:#52606d; } .date b { color:#1a7f43; }
+  .ghost { border:1px solid #cbd2d9; background:#fff; color:#52606d; border-radius:8px;
+    padding:9px 13px; font-size:13px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .ghost:hover { background:#f4f6f8; }
+  label.chk { display:flex; align-items:center; gap:12px; padding:13px 12px; margin-bottom:8px;
+    background:#f8f9fa; border-radius:10px; cursor:pointer; transition:.2s; font-size:15px; }
+  label.chk.done { background:#e6f6ec; color:#1a7f43; }
+  input[type=checkbox] { width:20px; height:20px; accent-color:#1a7f43; flex-shrink:0; }
+  .bar-bg { background:#e9edf0; border-radius:99px; height:10px; margin-top:16px; overflow:hidden; }
+  .bar { background:#1a7f43; height:100%; width:0%; transition:width .3s; }
+  .score { text-align:center; margin-top:9px; font-size:14px; color:#52606d; }
+  hr { border:0; border-top:1px solid #eef1f4; margin:22px 0 16px; }
+  .grid { display:grid; grid-template-columns:repeat(10,1fr); gap:6px; }
+  .cell { aspect-ratio:1; border-radius:6px; cursor:pointer; border:2px solid transparent; transition:.15s; }
+  .cell:hover { transform:scale(1.15); } .cell.sel { border-color:#1f2d3d; }
+  .lv0{background:#e9edf0}.lv1{background:#c8e6d3}.lv2{background:#9ad4b0}
+  .lv3{background:#63bd8b}.lv4{background:#349f66}.lv5{background:#1a7f43}
+  .legend { display:flex; align-items:center; gap:5px; justify-content:flex-end;
+    margin-top:11px; font-size:12px; color:#7b8794; }
+  .legend i { width:13px; height:13px; border-radius:3px; display:inline-block; }
+  .stats { display:flex; gap:7px; margin-top:14px; }
+  .stat { flex:1; background:#f8f9fa; border-radius:10px; padding:11px 4px; text-align:center; }
+  .stat b { display:block; font-size:18px; color:#1a7f43; }
+  .stat span { font-size:11px; color:#7b8794; }
+  .clock { font-size:56px; text-align:center; margin:6px 0 4px; font-variant-numeric:tabular-nums; }
+  .clock.run { color:#1a7f43; }
+  .sub { text-align:center; font-size:13px; color:#7b8794; margin-bottom:14px; min-height:18px; }
+  .presets { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .presets button { flex:0 0 calc(25% - 5px); border:1px solid #cbd2d9; background:#fff;
+    color:#52606d; border-radius:8px; padding:10px 0; font-size:14px; cursor:pointer; font-family:inherit; }
+  .presets button.on { background:#1a7f43; border-color:#1a7f43; color:#fff; }
+  .row { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+  .row input, .row select { flex:1; min-width:0; border:1px solid #cbd2d9; border-radius:8px;
+    padding:11px 12px; font-size:14px; font-family:inherit; background:#fff; color:#1f2d3d; }
+  .row input.on { border-color:#1a7f43; background:#f2fbf6; }
+  .row .lbl { font-size:13px; color:#52606d; flex-shrink:0; }
+  .ctrl { display:flex; gap:10px; }
+  .ctrl button { flex:1; border:0; border-radius:10px; padding:15px; font-size:16px;
+    cursor:pointer; font-family:inherit; font-weight:600; }
+  .go { background:#1a7f43; color:#fff; } .stop { background:#f1f4f6; color:#52606d; }
+  .week { display:flex; gap:5px; margin-top:8px; }
+  .week .col { flex:1; text-align:center; font-size:11px; color:#7b8794; background:#f1f4f6;
+    border-radius:7px; padding:8px 2px; cursor:pointer; border:2px solid transparent; }
+  .week .col.on { border-color:#1a7f43; background:#e6f6ec; }
+  .week .col b { display:block; font-size:14px; color:#1a7f43; }
+  .sum { font-size:13px; color:#52606d; background:#f8f9fa; border-radius:9px;
+    padding:11px 13px; margin-bottom:10px; } .sum b { color:#1a7f43; }
+  .item { display:flex; align-items:center; gap:9px; padding:11px 12px; margin-bottom:7px;
+    background:#f8f9fa; border-radius:9px; font-size:14px; }
+  .item .tm { color:#7b8794; font-variant-numeric:tabular-nums; width:44px; flex-shrink:0; font-size:13px; }
+  .item .tx { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .item .mn { font-weight:600; flex-shrink:0; }
+  .item .nt { font-size:12px; color:#7b8794; flex:1; min-width:0; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+  .item .nt:hover { color:#1a7f43; }
+  .tag { font-size:11px; padding:3px 8px; border-radius:99px; white-space:nowrap; flex-shrink:0; }
+  .tag.full { background:#e6f6ec; color:#1a7f43; }
+  .tag.part { background:#fff4e5; color:#8a5a00; }
+  .tag.mood { background:#eef2f7; color:#52606d; }
+  .del { border:0; background:transparent; color:#b7c0c8; font-size:18px; cursor:pointer;
+    padding:0 2px; line-height:1; flex-shrink:0; }
+  .del:hover { color:#d64545; }
+  .empty { font-size:13px; color:#9aa5b1; text-align:center; padding:16px 0; }
+  .big { width:100%; border:0; border-radius:10px; padding:14px; font-size:15px;
+    cursor:pointer; font-family:inherit; font-weight:600; margin-bottom:10px; }
+  .p1 { background:#1a7f43; color:#fff; } .p2 { background:#f1f4f6; color:#52606d; }
+  .p3 { background:#fff4e5; color:#8a5a00; }
+  .note { font-size:13px; color:#7b8794; line-height:1.7; background:#f8f9fa;
+    border-radius:10px; padding:13px; margin-top:6px; }
+  .warnbox { background:#fff4e5; color:#8a5a00; }
+  textarea { width:100%; border:1px solid #cbd2d9; border-radius:10px; padding:12px;
+    font-size:14px; font-family:inherit; line-height:1.7; resize:vertical; min-height:130px; color:#1f2d3d; }
+  .hint { font-size:12px; color:#9aa5b1; line-height:1.8; margin:8px 0 10px; }
+  .sl { margin-bottom:14px; }
+  .sl .lb { display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; }
+  .sl .lb b { color:#1a7f43; }
+  input[type=range] { width:100%; accent-color:#1a7f43; }
+  .chart { background:#fafbfc; border-radius:10px; padding:8px 4px; margin-top:4px; }
+  .phase { display:flex; gap:12px; padding:13px; border-radius:11px; margin-bottom:9px;
+    background:#f8f9fa; border-left:4px solid #cbd2d9; }
+  .phase.now { background:#e6f6ec; border-left-color:#1a7f43; }
+  .phase.done { border-left-color:#63bd8b; }
+  .phase .num { font-size:19px; font-weight:700; color:#cbd2d9; flex-shrink:0; width:22px; }
+  .phase.now .num, .phase.done .num { color:#1a7f43; }
+  .phase .ti { font-size:14px; font-weight:600; margin-bottom:3px; }
+  .phase .de { font-size:12px; color:#7b8794; line-height:1.6; }
+  .phase .st { font-size:11px; color:#1a7f43; margin-top:5px; font-weight:600; }
+  .flow { font-size:13px; line-height:2; color:#52606d; background:#f8f9fa;
+    border-radius:10px; padding:14px; }
+  .flow b { color:#1a7f43; }
+  .kpi { display:flex; align-items:center; gap:9px; font-size:13px; padding:9px 12px;
+    background:#f8f9fa; border-radius:9px; margin-bottom:7px; }
+  .kpi .ic { width:20px; flex-shrink:0; font-size:14px; }
+  .kpi .vl { margin-left:auto; font-weight:600; flex-shrink:0; }
+  .ok { color:#1a7f43; } .no { color:#c77700; }
+  .ord { display:flex; align-items:center; gap:8px; padding:9px 12px; background:#f8f9fa;
+    border-radius:9px; margin-bottom:6px; font-size:14px; }
+  .ord span { flex:1; }
+  .ord button { border:1px solid #cbd2d9; background:#fff; border-radius:7px; width:34px;
+    height:32px; font-size:15px; cursor:pointer; color:#52606d; }
+  .ord button:disabled { opacity:.3; cursor:default; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>บันทึกการปฏิบัติ</h1>
+  <div class="tabs" id="tabs">
+    <button class="on" data-p="0">ภาพรวม</button>
+    <button data-p="1">ศีล</button>
+    <button data-p="2">สมาธิ</button>
+    <button data-p="3">อารมณ์</button>
+    <button data-p="4">ปัญญา</button>
+    <button data-p="5">ข้อมูล</button>
+  </div>
+
+  <!-- ═════════ 0 : ภาพรวม ═════════ -->
+  <div class="page on" id="p0">
+    <div class="row">
+      <span class="lbl">เริ่มปฏิบัติ</span>
+      <input type="date" id="startDate">
+    </div>
+    <div class="sum" id="rmNow"></div>
+    <div class="bar-bg"><div class="bar" id="rmBar"></div></div>
+    <div class="score" id="rmScore"></div>
+    <h3>เส้นทาง 3 ระยะ</h3>
+    <div id="phases"></div>
+    <h3>ตัวชี้วัดตอนนี้</h3>
+    <div id="kpis"></div>
+    <h3>วงจรการปฏิบัติ (ไตรสิกขา)</h3>
+    <div class="flow">
+      <b>ศีล</b> — ตั้งฐานให้ใจไม่ขุ่น<br>↓ ใจสงบพอจะนั่งได้<br>
+      <b>สมาธิ</b> — ฝึกตั้งมั่น รู้เท่าทันอารมณ์<br>↓ เห็นความคิดเกิด-ดับตามจริง<br>
+      <b>ปัญญา</b> — เห็นอนิจจัง ตัดสินด้วยเหตุผล<br>↓ รักษาศีลได้เองโดยไม่ต้องฝืน<br>
+      <b>↻ กลับไปเสริมศีลให้ละเอียดขึ้น</b>
+    </div>
+    <h3>จังหวะการบันทึก</h3>
+    <div class="flow">
+      <b>ทุกวัน</b> — ติ๊กศีล 5 · นั่งสมาธิ · จดเหตุการณ์กังวล<br>
+      <b>ทุกสัปดาห์</b> — เขียนบันทึกสะท้อนคิด 1 ครั้ง<br>
+      <b>ทุกเดือน</b> — ประเมิน Resilience 5 ด้าน + สำรองข้อมูล
+    </div>
+  </div>
+
+  <!-- ═════════ 1 : ศีล ═════════ -->
+  <div class="page" id="p1">
+    <div class="head">
+      <div class="date" id="dateLabel"></div>
+      <button class="ghost" id="todayBtn">กลับวันนี้</button>
+    </div>
+    <div id="list"></div>
+    <div class="bar-bg"><div class="bar" id="bar"></div></div>
+    <div class="score" id="score"></div>
+    <hr>
+    <h2>ความรู้สึกผิด / กังวล</h2>
+    <div class="hint">เมื่อรู้สึกผิด กังวล หรือไม่สบายใจ — กดบันทึกทันที ไม่ต้องตัดสินตัวเอง</div>
+    <div class="row"><input type="text" id="gNote" placeholder="โน้ตสั้น ๆ (ไม่ใส่ก็ได้)" maxlength="80"></div>
+    <button class="big p3" id="gAdd">+1 บันทึกเหตุการณ์</button>
+    <div class="sum" id="gSum"></div>
+    <div id="gList"></div>
+    <h3>แนวโน้ม 6 เดือน (ครั้ง/เดือน)</h3>
+    <div class="chart" id="gChart"></div>
+    <hr>
+    <h2>ย้อนหลัง 30 วัน</h2>
+    <div class="grid" id="grid"></div>
+    <div class="legend">น้อย <i class="lv0"></i><i class="lv1"></i><i class="lv2"></i>
+      <i class="lv3"></i><i class="lv4"></i><i class="lv5"></i> มาก</div>
+    <div class="stats">
+      <div class="stat"><b id="stAvg">0%</b><span>เฉลี่ย 30 วัน</span></div>
+      <div class="stat"><b id="stStreak">0</b><span>ครบ 5 ติดกัน</span></div>
+      <div class="stat"><b id="stFull">0</b><span>วันครบทั้งหมด</span></div>
+    </div>
+  </div>
+
+  <!-- ═════════ 2 : สมาธิ ═════════ -->
+  <div class="page" id="p2">
+    <div class="clock" id="clock">15:00</div>
+    <div class="sub" id="tsub">เลือกเวลา แล้วกดเริ่ม</div>
+    <div class="presets" id="presets">
+      <button data-m="1">1 น.</button><button data-m="3">3 น.</button>
+      <button data-m="5">5 น.</button><button data-m="10">10 น.</button>
+      <button data-m="15" class="on">15 น.</button><button data-m="20">20 น.</button>
+      <button data-m="30">30 น.</button><button data-m="45">45 น.</button>
+    </div>
+    <div class="row">
+      <input type="number" id="customMin" min="1" max="180" placeholder="กำหนดเอง เช่น 25">
+      <button class="ghost" id="setCustom">ตั้งเวลา</button>
+    </div>
+    <div class="row">
+      <input type="text" id="sNote" placeholder="โน้ตรอบนี้ (ไม่ใส่ก็ได้) เช่น ฟุ้งมาก / สงบดี" maxlength="100">
+    </div>
+    <div class="ctrl">
+      <button class="go" id="goBtn">เริ่ม</button>
+      <button class="stop" id="stopBtn">จบ &amp; บันทึก</button>
+    </div>
+    <hr>
+    <h2>เป้าหมายรายสัปดาห์</h2>
+    <div class="row">
+      <span class="lbl">ตั้งเป้า</span>
+      <input type="number" id="wGoal" min="5" max="5000" step="5">
+      <span class="lbl">นาที / สัปดาห์</span>
+    </div>
+    <div class="presets" id="goalQuick">
+      <button data-g="35">35</button><button data-g="70">70</button>
+      <button data-g="105">105</button><button data-g="150">150</button>
+      <button data-g="210">210</button><button data-g="300">300</button>
+      <button data-g="420">420</button><button data-g="630">630</button>
+    </div>
+    <div class="bar-bg"><div class="bar" id="wbar"></div></div>
+    <div class="score" id="wscore"></div>
+    <div class="week" id="week"></div>
+    <hr>
+    <h2 id="sesTitle">ประวัติการนั่ง</h2>
+    <div class="sum" id="sesSum"></div>
+    <div id="sesList"></div>
+  </div>
+
+  <!-- ═════════ 3 : อารมณ์ ═════════ -->
+  <div class="page" id="p3">
+    <h2>เวลาฟื้นตัวจากอารมณ์ลบ</h2>
+    <div class="hint">บันทึกหลังใจกลับมาปกติแล้ว — เป้าหมายคือเห็นตัวเลข <b>ลดลง</b> เมื่อเวลาผ่านไป</div>
+    <div class="row"><input type="text" id="rEvent" placeholder="เหตุการณ์ เช่น ถูกตำหนิในที่ประชุม" maxlength="90"></div>
+    <div class="row">
+      <select id="rMood">
+        <option value="โกรธ">โกรธ</option><option value="กังวล">กังวล</option>
+        <option value="เศร้า">เศร้า</option><option value="หงุดหงิด">หงุดหงิด</option>
+        <option value="น้อยใจ">น้อยใจ</option><option value="กลัว">กลัว</option>
+        <option value="อื่น ๆ">อื่น ๆ</option>
+      </select>
+      <input type="number" id="rMin" min="1" max="1440" placeholder="ฟื้นตัวกี่นาที">
+    </div>
+    <div class="presets" id="rQuick">
+      <button data-m="5">5 น.</button><button data-m="15">15 น.</button>
+      <button data-m="30">30 น.</button><button data-m="60">1 ชม.</button>
+      <button data-m="180">3 ชม.</button><button data-m="360">6 ชม.</button>
+      <button data-m="720">12 ชม.</button><button data-m="1440">1 วัน</button>
+    </div>
+    <button class="big p1" id="rAdd">บันทึกเหตุการณ์</button>
+    <div class="stats">
+      <div class="stat"><b id="rA7">–</b><span>เฉลี่ย 7 วัน (น.)</span></div>
+      <div class="stat"><b id="rA30">–</b><span>เฉลี่ย 30 วัน (น.)</span></div>
+      <div class="stat"><b id="rCnt">0</b><span>ครั้งทั้งหมด</span></div>
+    </div>
+    <div class="sum" id="rTrend" style="margin-top:12px"></div>
+    <h3>ค่าเฉลี่ยรายสัปดาห์ (8 สัปดาห์)</h3>
+    <div class="chart" id="rChart"></div>
+    <hr>
+    <h2>บันทึกล่าสุด</h2>
+    <div id="rList"></div>
+  </div>
+
+  <!-- ═════════ 4 : ปัญญา ═════════ -->
+  <div class="page" id="p4">
+    <h2>บันทึกสะท้อนคิดรายสัปดาห์</h2>
+    <div class="head">
+      <button class="ghost" id="wPrev">‹ ก่อนหน้า</button>
+      <div class="date" id="wLabel"></div>
+      <button class="ghost" id="wNext">ถัดไป ›</button>
+    </div>
+    <div class="hint">
+      • สัปดาห์นี้มีอะไร <b>เปลี่ยนไป</b> ที่เคยคิดว่าจะไม่เปลี่ยน<br>
+      • เรื่องที่เคยทุกข์เมื่อ 3 เดือนก่อน ตอนนี้รู้สึกยังไง<br>
+      • มีครั้งไหนที่ตัดสินใจด้วย <b>เหตุผล</b> แทน <b>อารมณ์</b>
+    </div>
+    <textarea id="refText" placeholder="เขียนอิสระ ไม่ต้องสวย ขอแค่จริง…"></textarea>
+    <button class="big p1" id="refSave" style="margin-top:10px">บันทึก</button>
+    <div class="sum" id="refInfo"></div>
+    <hr>
+    <h2>ประเมิน Resilience รายเดือน</h2>
+    <div class="head">
+      <button class="ghost" id="mPrev">‹</button>
+      <div class="date" id="mLabel"></div>
+      <button class="ghost" id="mNext">›</button>
+    </div>
+    <div id="sliders"></div>
+    <h3>เรดาร์ 360° (เทียบเดือนก่อน)</h3>
+    <div class="chart" id="radar"></div>
+    <div class="sum" id="mSum"></div>
+  </div>
+
+  <!-- ═════════ 5 : ข้อมูล ═════════ -->
+  <div class="page" id="p5">
+    <h2>จัดลำดับแท็บ</h2>
+    <div class="hint">กดค้างที่แท็บด้านบน ~0.4 วินาที แล้วลากซ้าย-ขวาเพื่อสลับ<br>หรือใช้ปุ่ม ‹ › ด้านล่างนี้</div>
+    <div id="ordList"></div>
+    <button class="big p2" id="ordReset">คืนค่าลำดับเดิม</button>
+    <hr>
+    <h2>สำรองข้อมูล</h2>
+    <button class="big p1" id="expJson">ดาวน์โหลดไฟล์สำรองทั้งหมด (.json)</button>
+    <button class="big p2" id="expCsv">ตารางสรุปรายวัน (.csv)</button>
+    <button class="big p2" id="expSes">ประวัติการนั่งสมาธิ (.csv)</button>
+    <button class="big p2" id="expRec">เหตุการณ์ &amp; เวลาฟื้นตัว (.csv)</button>
+    <button class="big p2" id="expRef">บันทึกสะท้อนคิด + ประเมิน (.csv)</button>
+    <button class="big p3" id="impBtn">นำไฟล์สำรองกลับเข้ามา</button>
+    <input type="file" id="file" accept=".json" style="display:none">
+    <div class="note" id="info"></div>
+    <div class="note warnbox">
+      ⚠️ ข้อมูลเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น ถ้าล้างแคชจะหาย<br>
+      <b>แนะนำ: ดาวน์โหลด .json ขึ้น Google Drive ทุกสิ้นเดือน</b>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ ค่าคงที่ ═══════════ */
+const RULES = ["ไม่เบียดเบียนชีวิตผู้อื่น","ไม่เอาสิ่งที่เจ้าของไม่ได้ให้",
+  "ไม่ประพฤติผิดในกาม","ไม่พูดเท็จ / ไม่พูดส่อเสียด","ไม่ดื่มของมึนเมา"];
+const AXES = [
+  ["วุฒิภาวะ","ควบคุมการแสดงออกได้แม้ถูกยั่ว"],
+  ["ไม่ยึดตัวตน","ยอมรับคำวิจารณ์โดยไม่ป้องกันตัว"],
+  ["เหตุผลนิยม","ตัดสินด้วยข้อมูล ไม่ใช่อารมณ์"],
+  ["เห็นอนิจจัง","รู้ว่าทุกอย่างเปลี่ยนได้เสมอ"],
+  ["ฟื้นตัวไว","กลับสู่ปกติได้เร็วหลังกระทบ"]
+];
+const DAYS = 30;
+const TABNAME = {"0":"ภาพรวม","1":"ศีล","2":"สมาธิ","3":"อารมณ์","4":"ปัญญา","5":"ข้อมูล"};
+
+/* ═══════════ วันที่ ═══════════ */
+const fmt = d => d.toLocaleDateString("sv-SE");
+const TODAY = fmt(new Date());
+const THMON = TODAY.slice(0,7);
+const dPlus = n => { const d = new Date(); d.setDate(d.getDate()+n); return fmt(d); };
+const thDate = (s,o) => new Date(s+"T00:00:00").toLocaleDateString("th-TH", o||{day:"numeric",month:"short"});
+function weekKey(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay()||7));
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(),0,1));
+  return t.getUTCFullYear()+"-W"+String(Math.ceil(((t-y0)/864e5+1)/7)).padStart(2,"0");
+}
+function monday(off) { const d = new Date(); d.setDate(d.getDate()-((d.getDay()||7)-1)+off*7); d.setHours(0,0,0,0); return d; }
+function monShift(ym,n) { const d = new Date(+ym.slice(0,4), +ym.slice(5,7)-1+n, 1);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+const thMon = ym => new Date(ym+"-01T00:00:00").toLocaleDateString("th-TH",{month:"long",year:"numeric"});
+
+/* ═══════════ อ่าน/เขียน ═══════════ */
+const J = (k,d) => { try { return JSON.parse(localStorage.getItem(k) || d); } catch(e) { return JSON.parse(d); } };
+const load   = k => J("log-"+k,"[false,false,false,false,false]");
+const save   = (k,a) => localStorage.setItem("log-"+k, JSON.stringify(a));
+const count  = k => load(k).filter(Boolean).length;
+const med    = k => +(localStorage.getItem("med-"+k) || 0);
+const setMed = (k,m) => localStorage.setItem("med-"+k, Math.max(m,0));
+const ses    = k => J("ses-"+k,"[]");
+const setSes = (k,a) => localStorage.setItem("ses-"+k, JSON.stringify(a));
+const guilt  = k => J("glt-"+k,"[]");
+const setGlt = (k,a) => localStorage.setItem("glt-"+k, JSON.stringify(a));
+const recov  = k => J("rec-"+k,"[]");
+const setRec = (k,a) => localStorage.setItem("rec-"+k, JSON.stringify(a));
+const refl   = w => J("ref-"+w,'{"t":""}');
+const setRef = (w,o) => localStorage.setItem("ref-"+w, JSON.stringify(o));
+const resil  = m => J("res-"+m,"null");
+const setRes = (m,a) => localStorage.setItem("res-"+m, JSON.stringify(a));
+const goal   = () => +(localStorage.getItem("weekGoal") || 150);
+const now = () => { const d = new Date();
+  return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); };
+
+const dayList = [];
+for (let i = DAYS-1; i >= 0; i--) dayList.push(dPlus(-i));
+
+/* ═══════════ กราฟ SVG ═══════════ */
+function chartBar(vals, labs, color) {
+  const W=380,H=126,P=20, max=Math.max(1,...vals), bw=(W-P*2)/vals.length;
+  let s='<line x1="'+P+'" y1="'+(H-P)+'" x2="'+(W-P)+'" y2="'+(H-P)+'" stroke="#e3e8ec"/>';
+  vals.forEach((v,i) => {
+    const h = v/max*(H-P*2), x = P+i*bw+bw*.18;
+    s += '<rect x="'+x+'" y="'+(H-P-h)+'" width="'+bw*.64+'" height="'+Math.max(h,2)+'" rx="3" fill="'+color+'"/>';
+    if (v) s += '<text x="'+(P+i*bw+bw/2)+'" y="'+(H-P-h-4)+'" font-size="9" fill="#52606d" text-anchor="middle">'+v+'</text>';
+  });
+  labs.forEach((l,i) => s += '<text x="'+(P+i*bw+bw/2)+'" y="'+(H-6)+'" font-size="9" fill="#9aa5b1" text-anchor="middle">'+l+'</text>');
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+s+'</svg>';
+}
+function chartLine(vals, labs, color) {
+  const W=380,H=126,P=22, ok=vals.filter(v=>v!==null);
+  const max=Math.max(1,...ok), step=(W-P*2)/Math.max(vals.length-1,1);
+  const Y = v => H-P-(v/max)*(H-P*2-6);
+  let pts=[], s='<line x1="'+P+'" y1="'+(H-P)+'" x2="'+(W-P)+'" y2="'+(H-P)+'" stroke="#e3e8ec"/>';
+  vals.forEach((v,i) => { if (v!==null) pts.push([P+i*step, Y(v)]); });
+  if (pts.length>1) s += '<polyline fill="none" stroke="'+color+'" stroke-width="2.5" stroke-linejoin="round" points="'+pts.map(p=>p.join(",")).join(" ")+'"/>';
+  vals.forEach((v,i) => { if (v!==null) {
+    s += '<circle cx="'+(P+i*step)+'" cy="'+Y(v)+'" r="3.5" fill="'+color+'"/>';
+    s += '<text x="'+(P+i*step)+'" y="'+(Y(v)-8)+'" font-size="9" fill="#52606d" text-anchor="middle">'+v+'</text>';
+  }});
+  labs.forEach((l,i) => s += '<text x="'+(P+i*step)+'" y="'+(H-6)+'" font-size="9" fill="#9aa5b1" text-anchor="middle">'+l+'</text>');
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+s+'</svg>';
+}
+function chartRadar(cur, prev) {
+  const S=290,c=S/2,R=92,n=AXES.length;
+  const pt=(i,r)=>{const a=-Math.PI/2+i*2*Math.PI/n;return [c+Math.cos(a)*r, c+Math.sin(a)*r];};
+  let s='';
+  for (let g=1; g<=5; g++) s += '<polygon points="'+[...Array(n)].map((_,i)=>pt(i,R*g/5).join(",")).join(" ")+'" fill="none" stroke="#e9edf0"/>';
+  for (let i=0;i<n;i++) s += '<line x1="'+c+'" y1="'+c+'" x2="'+pt(i,R)[0]+'" y2="'+pt(i,R)[1]+'" stroke="#e9edf0"/>';
+  const poly=(v,fill,st,dash)=>'<polygon points="'+v.map((x,i)=>pt(i,R*x/5).join(",")).join(" ")+'" fill="'+fill+'" stroke="'+st+'" stroke-width="2"'+(dash?' stroke-dasharray="5 4"':'')+'/>';
+  if (prev) s += poly(prev,"none","#b7c0c8",1);
+  if (cur)  s += poly(cur,"rgba(26,127,67,.18)","#1a7f43",0);
+  AXES.forEach((a,i) => { const [x,y]=pt(i,R+17);
+    s += '<text x="'+x+'" y="'+(y+3)+'" font-size="10" fill="#52606d" text-anchor="'+(x<c-8?"end":x>c+8?"start":"middle")+'">'+a[0]+'</text>'; });
+  return '<svg viewBox="-18 0 '+(S+36)+' '+S+'" width="100%">'+s+'</svg>';
+}
+
+/* ═══════════ แท็บ + ลากสลับตำแหน่ง ═══════════ */
+const tabsEl = document.getElementById("tabs");
+const GAP = 4;
+
+function applyOrder() {
+  const o = J("tabOrder","null");
+  if (!o) return;
+  o.forEach(p => { const b = tabsEl.querySelector('button[data-p="'+p+'"]'); if (b) tabsEl.appendChild(b); });
+}
+function saveOrder() {
+  localStorage.setItem("tabOrder",
+    JSON.stringify([...tabsEl.children].map(b => b.dataset.p)));
+  renderOrd();
+}
+function openTab(btn) {
+  [...tabsEl.children].forEach(x => x.classList.remove("on"));
+  document.querySelectorAll(".page").forEach(x => x.classList.remove("on"));
+  btn.classList.add("on");
+  document.getElementById("p"+btn.dataset.p).classList.add("on");
+  const p = btn.dataset.p;
+  if (p==="0") renderRoad(); if (p==="3") renderRec();
+  if (p==="4") { renderRef(); renderRes(); } if (p==="5") { showInfo(); renderOrd(); }
+  window.scrollTo(0,0);
+}
+
+let dEl=null, dragging=false, hold=null, baseX=0, startY=0, moved=false;
+function endDrag() {
+  clearTimeout(hold);
+  if (dragging && dEl) {
+    dEl.style.transform = ""; dEl.classList.remove("drag");
+    tabsEl.classList.remove("dragging");
+    saveOrder();
+  }
+  dragging = false; dEl = null;
+}
+[...tabsEl.children].forEach(btn => {
+  btn.addEventListener("pointerdown", e => {
+    dEl = btn; moved = false; baseX = e.clientX; startY = e.clientY;
+    hold = setTimeout(() => {
+      dragging = true; moved = true;
+      btn.classList.add("drag"); tabsEl.classList.add("dragging");
+      try { btn.setPointerCapture(e.pointerId); } catch(err) {}
+      if (navigator.vibrate) navigator.vibrate(18);
+    }, 400);
+  });
+  btn.addEventListener("pointermove", e => {
+    if (!dEl) return;
+    if (!dragging) {
+      if (Math.abs(e.clientX-baseX) > 8 || Math.abs(e.clientY-startY) > 8) clearTimeout(hold);
+      return;
+    }
+    e.preventDefault();
+    let dx = e.clientX - baseX;
+    const prev = dEl.previousElementSibling, next = dEl.nextElementSibling;
+    if (prev && dx < -(prev.offsetWidth+GAP)/2) {
+      tabsEl.insertBefore(dEl, prev); baseX -= prev.offsetWidth+GAP; dx = e.clientX-baseX;
+    } else if (next && dx > (next.offsetWidth+GAP)/2) {
+      tabsEl.insertBefore(dEl, next.nextElementSibling); baseX += next.offsetWidth+GAP; dx = e.clientX-baseX;
+    }
+    dEl.style.transform = "translateX("+dx+"px)";
+  });
+  btn.addEventListener("pointerup", () => { const was = dragging; endDrag(); if (!was && !moved) openTab(btn); });
+  btn.addEventListener("pointercancel", endDrag);
+  btn.addEventListener("click", e => { if (moved) e.preventDefault(); });
+});
+
+function renderOrd() {
+  const w = document.getElementById("ordList"); w.innerHTML = "";
+  const arr = [...tabsEl.children];
+  arr.forEach((b,i) => {
+    const d = document.createElement("div"); d.className = "ord";
+    d.innerHTML = '<span>'+(i+1)+'. '+TABNAME[b.dataset.p]+'</span>';
+    const L = document.createElement("button"); L.textContent = "‹"; L.disabled = i===0;
+    L.onclick = () => { tabsEl.insertBefore(b, b.previousElementSibling); saveOrder(); };
+    const R = document.createElement("button"); R.textContent = "›"; R.disabled = i===arr.length-1;
+    R.onclick = () => { tabsEl.insertBefore(b.nextElementSibling, b); saveOrder(); };
+    d.append(L,R); w.appendChild(d);
+  });
+}
+document.getElementById("ordReset").onclick = () => {
+  localStorage.removeItem("tabOrder");
+  ["0","1","2","3","4","5"].forEach(p => tabsEl.appendChild(tabsEl.querySelector('button[data-p="'+p+'"]')));
+  renderOrd();
+};
+
+/* ═══════════ 1 : ศีล ═══════════ */
+let selected = TODAY;
+const boxes = RULES.map((t,i) => {
+  const l = document.createElement("label"), b = document.createElement("input");
+  l.className = "chk"; b.type = "checkbox";
+  b.onchange = () => { const a = load(selected); a[i] = b.checked; save(selected,a); renderSila(); };
+  l.append(b, document.createTextNode(t));
+  document.getElementById("list").appendChild(l);
+  return b;
+});
+const cells = dayList.map(k => {
+  const c = document.createElement("div"); c.className = "cell";
+  c.onclick = () => { selected = k; renderSila(); };
+  document.getElementById("grid").appendChild(c);
+  return c;
+});
+function renderSila() {
+  const a = load(selected), n = a.filter(Boolean).length;
+  document.getElementById("dateLabel").innerHTML = (selected===TODAY ? "<b>วันนี้</b> · " : "") +
+    thDate(selected,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  boxes.forEach((b,i) => { b.checked = a[i]; b.parentElement.classList.toggle("done", a[i]); });
+  document.getElementById("bar").style.width = n/5*100+"%";
+  document.getElementById("score").textContent = n+" / 5 ข้อ"+(n===5?"  ✓ ครบทุกข้อ":"");
+  let tot=0, full=0;
+  dayList.forEach((k,i) => {
+    const c = count(k); tot += c; if (c===5) full++;
+    cells[i].className = "cell lv"+c+(k===selected?" sel":"");
+    cells[i].title = thDate(k)+" — ศีล "+c+"/5 · สมาธิ "+med(k)+" น. · กังวล "+guilt(k).length+" ครั้ง";
+  });
+  let st=0; for (let i=dayList.length-1;i>=0;i--) { if (count(dayList[i])===5) st++; else break; }
+  document.getElementById("stAvg").textContent = Math.round(tot/(DAYS*5)*100)+"%";
+  document.getElementById("stStreak").textContent = st;
+  document.getElementById("stFull").textContent = full;
+  renderGuilt();
+}
+document.getElementById("todayBtn").onclick = () => { selected = TODAY; renderSila(); };
+document.getElementById("gAdd").onclick = () => {
+  const inp = document.getElementById("gNote"), a = guilt(selected);
+  a.push({ h: selected===TODAY ? now() : "—", n: inp.value.trim() });
+  setGlt(selected,a); inp.value = ""; renderSila();
+};
+document.getElementById("gNote").onkeydown = e => { if (e.key==="Enter") document.getElementById("gAdd").click(); };
+function renderGuilt() {
+  const a = guilt(selected), w = document.getElementById("gList");
+  const last7 = [0,1,2,3,4,5,6].reduce((s,i)=>s+guilt(dPlus(-i)).length,0);
+  document.getElementById("gSum").innerHTML = (a.length ? "วันนี้ <b>"+a.length+"</b> ครั้ง · " : "ยังไม่มีบันทึกในวันนี้ · ")+
+    "7 วันล่าสุดรวม <b>"+last7+"</b> ครั้ง";
+  w.innerHTML = a.length ? "" : '<div class="empty">ใจสงบดี หรือยังไม่ได้บันทึก</div>';
+  a.forEach((x,i) => {
+    const r = document.createElement("div"); r.className = "item";
+    r.innerHTML = '<span class="tm">'+x.h+'</span><span class="tx">'+(x.n||'<i style="color:#b7c0c8">ไม่มีโน้ต</i>')+'</span>';
+    const d = document.createElement("button"); d.className="del"; d.textContent="×";
+    d.onclick = () => { const b = guilt(selected); b.splice(i,1); setGlt(selected,b); renderSila(); };
+    r.appendChild(d); w.appendChild(r);
+  });
+  const labs=[], vals=[];
+  for (let m=5;m>=0;m--) {
+    const ym = monShift(THMON,-m); labs.push(thMon(ym).split(" ")[0].slice(0,3));
+    let c=0; for (let d=1;d<=31;d++) c += guilt(ym+"-"+String(d).padStart(2,"0")).length;
+    vals.push(c);
+  }
+  document.getElementById("gChart").innerHTML = chartBar(vals, labs, "#e0a33e");
+}
+
+/* ═══════════ 2 : สมาธิ ═══════════ */
+let target=900, left=900, tick=null, endAt=0, wake=null, sesDay=TODAY;
+const clock = document.getElementById("clock"), tsub = document.getElementById("tsub");
+const mmss = s => String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+
+function setTarget(min, fromPreset) {
+  if (tick) { alert('กำลังจับเวลาอยู่ — กด "จบ & บันทึก" ก่อนเปลี่ยนเวลา'); return false; }
+  target = min*60; left = target; clock.textContent = mmss(left);
+  document.querySelectorAll("#presets button").forEach(x => x.classList.toggle("on", fromPreset && +x.dataset.m===min));
+  document.getElementById("customMin").classList.toggle("on", !fromPreset);
+  tsub.textContent = "ตั้งไว้ "+min+" นาที · กดเริ่มได้เลย";
+  localStorage.setItem("lastMin", min); return true;
+}
+document.querySelectorAll("#presets button").forEach(b => b.onclick = () => {
+  if (setTarget(+b.dataset.m,true)) document.getElementById("customMin").value = "";
+});
+document.getElementById("setCustom").onclick = () => {
+  const v = Math.round(+document.getElementById("customMin").value);
+  if (!v||v<1||v>180) { alert("กรุณาใส่ตัวเลข 1–180 นาที"); return; }
+  setTarget(v,false);
+};
+document.getElementById("customMin").onkeydown = e => { if (e.key==="Enter") document.getElementById("setCustom").click(); };
+
+const gIn = document.getElementById("wGoal");
+gIn.value = goal();
+function setGoal(v) {
+  v = Math.round(v);
+  if (!v||v<5||v>5000) { alert("กรุณาใส่ตัวเลข 5–5000 นาที"); gIn.value = goal(); return; }
+  localStorage.setItem("weekGoal", v); gIn.value = v; renderWeek(); renderRoad();
+}
+gIn.onchange = () => setGoal(+gIn.value);
+document.querySelectorAll("#goalQuick button").forEach(b => b.onclick = () => setGoal(+b.dataset.g));
+
+function bell() { try {
+  const ac = new (window.AudioContext||window.webkitAudioContext)();
+  [880,1320].forEach((f,i) => { const o=ac.createOscillator(), g=ac.createGain();
+    o.frequency.value=f; o.connect(g); g.connect(ac.destination);
+    g.gain.setValueAtTime(i?.12:.28, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, ac.currentTime+3);
+    o.start(); o.stop(ac.currentTime+3); });
+} catch(e) {} }
+async function keepAwake(on) { try {
+  if (on && "wakeLock" in navigator) wake = await navigator.wakeLock.request("screen");
+  else if (wake) { wake.release(); wake = null; }
+} catch(e) {} }
+
+document.getElementById("goBtn").onclick = function() {
+  if (tick) { clearInterval(tick); tick=null; keepAwake(false);
+    clock.classList.remove("run"); this.textContent="เริ่มต่อ";
+    tsub.textContent="หยุดชั่วคราว · เหลือ "+mmss(Math.max(left,0)); return; }
+  bell(); keepAwake(true); endAt = Date.now()+left*1000;
+  clock.classList.add("run"); this.textContent="หยุดชั่วคราว"; tsub.textContent="กำลังนั่ง…";
+  tick = setInterval(() => {
+    left = Math.round((endAt-Date.now())/1000);
+    clock.textContent = mmss(Math.max(left,0));
+    if (left<=0) { clearInterval(tick); tick=null; bell(); finish(true); }
+  }, 250);
+};
+document.getElementById("stopBtn").onclick = () => finish(false);
+
+function finish(done) {
+  if (tick) { clearInterval(tick); tick=null; }
+  keepAwake(false);
+  const m = Math.round((target-Math.max(left,0))/60);
+  clock.classList.remove("run");
+  document.getElementById("goBtn").textContent = "เริ่ม";
+  const nEl = document.getElementById("sNote");
+  if (m>=1) {
+    const a = ses(TODAY);
+    a.push({h:now(), m:m, g:target/60, f:done?1:0, n:nEl.value.trim()});
+    setSes(TODAY,a); setMed(TODAY, med(TODAY)+m); sesDay = TODAY; nEl.value = "";
+    tsub.textContent = (done?"✓ ครบเวลา · ":"✓ ")+"บันทึก "+m+" นาทีแล้ว";
+  } else tsub.textContent = "ยังไม่ถึง 1 นาที — ไม่ได้บันทึก";
+  left = target; clock.textContent = mmss(left);
+  renderWeek(); renderSes(); renderSila();
+}
+function renderWeek() {
+  const w = document.getElementById("week"); w.innerHTML = ""; let sum = 0;
+  for (let i=6;i>=0;i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const k = fmt(d), m = med(k); sum += m;
+    const c = document.createElement("div");
+    c.className = "col"+(k===sesDay?" on":"");
+    c.innerHTML = "<b>"+m+"</b>"+d.toLocaleDateString("th-TH",{weekday:"narrow"});
+    c.onclick = () => { sesDay = k; renderWeek(); renderSes(); };
+    w.appendChild(c);
+  }
+  const G = goal(), pct = Math.round(sum/G*100);
+  document.getElementById("wbar").style.width = Math.min(pct,100)+"%";
+  document.getElementById("wscore").textContent = sum+" / "+G+" นาที ("+pct+"%)"+
+    (sum>=G ? "  ✓ ถึงเป้าแล้ว" : "  · เหลือ "+(G-sum)+" นาที");
+}
+function renderSes() {
+  const a = ses(sesDay), w = document.getElementById("sesList");
+  document.getElementById("sesTitle").textContent = "ประวัติการนั่ง — " +
+    (sesDay===TODAY ? "วันนี้" : thDate(sesDay,{weekday:"long",day:"numeric",month:"long"}));
+  const tot = a.reduce((s,x)=>s+x.m,0), lg = a.length?Math.max(...a.map(x=>x.m)):0;
+  document.getElementById("sesSum").innerHTML = a.length
+    ? "<b>"+a.length+"</b> รอบ · รวม <b>"+tot+"</b> นาที · ยาวสุด <b>"+lg+"</b> นาที"
+    : "ยังไม่มีการนั่งในวันนี้";
+  w.innerHTML = a.length ? "" : '<div class="empty">กดเลือกเวลาด้านบนแล้วเริ่มได้เลย</div>';
+  a.forEach((s,i) => {
+    const r = document.createElement("div"); r.className = "item";
+    r.innerHTML = '<span class="tm">'+s.h+'</span><span class="mn">'+s.m+' น.</span>';
+    const nt = document.createElement("span");
+    nt.className = "nt";
+    nt.innerHTML = s.n ? s.n : '<i style="color:#c3cad1">+ เพิ่มโน้ต</i>';
+    nt.title = "แตะเพื่อแก้ไขโน้ต";
+    nt.onclick = () => {
+      const v = prompt("โน้ตสำหรับรอบ "+s.h+" ("+s.m+" นาที)", s.n||"");
+      if (v===null) return;
+      const b = ses(sesDay); b[i].n = v.trim(); setSes(sesDay,b); renderSes();
+    };
+    r.appendChild(nt);
+    const tg = document.createElement("span");
+    tg.className = "tag "+(s.f?"full":"part");
+    tg.textContent = s.f ? "ครบเวลา" : "จบก่อน";
+    r.appendChild(tg);
+    const d = document.createElement("button"); d.className="del"; d.textContent="×";
+    d.onclick = () => { if(!confirm("ลบรอบ "+s.h+" ("+s.m+" นาที)?")) return;
+      const b = ses(sesDay); b.splice(i,1); setSes(sesDay,b);
+      setMed(sesDay, med(sesDay)-s.m); renderWeek(); renderSes(); renderSila(); };
+    r.appendChild(d); w.appendChild(r);
+  });
+}
+
+/* ═══════════ 3 : อารมณ์ ═══════════ */
+document.querySelectorAll("#rQuick button").forEach(b => b.onclick = () => {
+  document.getElementById("rMin").value = b.dataset.m;
+  document.querySelectorAll("#rQuick button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");
+});
+document.getElementById("rAdd").onclick = () => {
+  const ev = document.getElementById("rEvent").value.trim();
+  const m = Math.round(+document.getElementById("rMin").value);
+  if (!m||m<1) { alert("กรุณาใส่เวลาที่ใช้ฟื้นตัว (นาที)"); return; }
+  const a = recov(TODAY);
+  a.push({h:now(), e:ev||"(ไม่ระบุ)", d:document.getElementById("rMood").value, m:m});
+  setRec(TODAY,a);
+  document.getElementById("rEvent").value=""; document.getElementById("rMin").value="";
+  document.querySelectorAll("#rQuick button").forEach(x=>x.classList.remove("on"));
+  renderRec();
+};
+function recRange(n) { let s=0,c=0;
+  for (let i=0;i<n;i++) recov(dPlus(-i)).forEach(x=>{s+=x.m;c++;});
+  return c ? Math.round(s/c) : null; }
+function renderRec() {
+  const a7 = recRange(7), a30 = recRange(30);
+  document.getElementById("rA7").textContent = a7===null?"–":a7;
+  document.getElementById("rA30").textContent = a30===null?"–":a30;
+  let all=0; allDates().forEach(k => all += recov(k).length);
+  document.getElementById("rCnt").textContent = all;
+  const t = document.getElementById("rTrend");
+  if (a7!==null && a30!==null) { const diff = a30-a7;
+    t.innerHTML = diff>0 ? "✓ ฟื้นตัวเร็วขึ้น <b>"+diff+"</b> นาที เทียบค่าเฉลี่ย 30 วัน"
+      : diff<0 ? "ช่วงนี้ใช้เวลาฟื้นตัวนานขึ้น "+(-diff)+" นาที — ลองเพิ่มเวลานั่งสมาธิ" : "ค่าเฉลี่ยคงที่";
+  } else t.textContent = "บันทึกสัก 2–3 ครั้ง แล้วจะเริ่มเห็นแนวโน้ม";
+  const labs=[], vals=[];
+  for (let w=7;w>=0;w--) { let s=0,c=0;
+    for (let d=0;d<7;d++) { const k = fmt(new Date(monday(-w).getTime()+d*864e5));
+      recov(k).forEach(x=>{s+=x.m;c++;}); }
+    labs.push(w===0?"นี้":"-"+w); vals.push(c?Math.round(s/c):null); }
+  document.getElementById("rChart").innerHTML = chartLine(vals, labs, "#3b7dd8");
+  const w = document.getElementById("rList"); w.innerHTML = "";
+  let rows = [];
+  for (let i=0;i<30;i++) { const k = dPlus(-i); recov(k).forEach((x,idx)=>rows.push([k,idx,x])); }
+  if (!rows.length) { w.innerHTML = '<div class="empty">ยังไม่มีบันทึก</div>'; return; }
+  rows.slice(0,15).forEach(([k,idx,x]) => {
+    const r = document.createElement("div"); r.className = "item";
+    r.innerHTML = '<span class="tm">'+(k===TODAY?x.h:thDate(k))+'</span><span class="tx">'+x.e+'</span>'+
+      '<span class="tag mood">'+x.d+'</span><span class="mn">'+(x.m>=60?(x.m/60).toFixed(1)+" ชม.":x.m+" น.")+'</span>';
+    const d = document.createElement("button"); d.className="del"; d.textContent="×";
+    d.onclick = () => { const b = recov(k); b.splice(idx,1); setRec(k,b); renderRec(); };
+    r.appendChild(d); w.appendChild(r);
+  });
+}
+
+/* ═══════════ 4 : ปัญญา ═══════════ */
+let wOff = 0;
+const refEl = document.getElementById("refText");
+const curWeek = () => weekKey(monday(wOff));
+function renderRef() {
+  const m = monday(wOff), e = new Date(m.getTime()+6*864e5);
+  document.getElementById("wLabel").innerHTML = (wOff===0?"<b>สัปดาห์นี้</b> · ":"") +
+    m.toLocaleDateString("th-TH",{day:"numeric",month:"short"})+" – "+
+    e.toLocaleDateString("th-TH",{day:"numeric",month:"short"});
+  const r = refl(curWeek());
+  refEl.value = r.t || "";
+  const done = [...Array(12)].filter((_,i)=>(refl(weekKey(monday(-i))).t||"").length>10).length;
+  document.getElementById("refInfo").innerHTML = (r.at ? "บันทึกล่าสุด "+r.at+" · " : "ยังไม่ได้บันทึกสัปดาห์นี้ · ")+
+    "เขียนแล้ว <b>"+done+"</b> จาก 12 สัปดาห์ล่าสุด";
+  document.getElementById("wNext").style.opacity = wOff>=0 ? .4 : 1;
+}
+document.getElementById("wPrev").onclick = () => { wOff--; renderRef(); };
+document.getElementById("wNext").onclick = () => { if (wOff<0) { wOff++; renderRef(); } };
+function storeRef() { setRef(curWeek(), {t:refEl.value.trim(),
+  at:new Date().toLocaleString("th-TH",{dateStyle:"short",timeStyle:"short"})}); }
+document.getElementById("refSave").onclick = () => { storeRef(); renderRef(); alert("บันทึกแล้ว"); };
+refEl.onblur = () => { if (refEl.value.trim()) storeRef(); };
+
+let mKey = THMON;
+const slWrap = document.getElementById("sliders");
+const sls = AXES.map((a,i) => {
+  const d = document.createElement("div"); d.className = "sl";
+  d.innerHTML = '<div class="lb"><span>'+a[0]+' <span style="color:#9aa5b1;font-size:11px">'+a[1]+'</span></span><b>3</b></div>';
+  const r = document.createElement("input");
+  r.type="range"; r.min=1; r.max=5; r.step=1; r.value=3;
+  r.oninput = () => { d.querySelector("b").textContent = r.value; };
+  r.onchange = () => { const v = resil(mKey) || [3,3,3,3,3]; v[i] = +r.value; setRes(mKey,v); renderRes(); };
+  d.appendChild(r); slWrap.appendChild(d);
+  return {r:r, b:d.querySelector("b")};
+});
+function renderRes() {
+  document.getElementById("mLabel").innerHTML = (mKey===THMON?"<b>เดือนนี้</b> · ":"")+thMon(mKey);
+  const cur = resil(mKey), prev = resil(monShift(mKey,-1)), v = cur || [3,3,3,3,3];
+  sls.forEach((s,i) => { s.r.value = v[i]; s.b.textContent = v[i]; });
+  document.getElementById("radar").innerHTML = chartRadar(cur, prev);
+  const avg = a => (a.reduce((s,x)=>s+x,0)/a.length);
+  document.getElementById("mSum").innerHTML = !cur
+    ? "ยังไม่ได้ประเมินเดือนนี้ — เลื่อนแถบด้านบนเพื่อบันทึก"
+    : "คะแนนเฉลี่ย <b>"+avg(cur).toFixed(1)+"</b> / 5"+
+      (prev ? " · เดือนก่อน "+avg(prev).toFixed(1)+" ("+(avg(cur)-avg(prev)>=0?"+":"")+(avg(cur)-avg(prev)).toFixed(1)+")" : "");
+  document.getElementById("mNext").style.opacity = mKey>=THMON ? .4 : 1;
+}
+document.getElementById("mPrev").onclick = () => { mKey = monShift(mKey,-1); renderRes(); };
+document.getElementById("mNext").onclick = () => { if (mKey<THMON) { mKey = monShift(mKey,1); renderRes(); } };
+
+/* ═══════════ 0 : Roadmap ═══════════ */
+const PH = [
+  ["ศีล — สร้างรากฐาน","เดือน 1–3","รักษาศีล 5 ให้ได้ >90% · ลดความรู้สึกผิด/กังวล",0,3],
+  ["สมาธิ — ฝึกตั้งมั่น","เดือน 3–6","นั่งสม่ำเสมอทุกวัน · ถึงเป้าหมายรายสัปดาห์ · ฟื้นตัวเร็วขึ้น",3,6],
+  ["ปัญญา — เห็นตามจริง","เดือน 6 เป็นต้นไป","สะท้อนคิดรายสัปดาห์ · ประเมิน Resilience รายเดือน · ต่อเนื่องถึง 7 ปี",6,84]
+];
+const sd = document.getElementById("startDate");
+sd.onchange = () => { localStorage.setItem("startDate", sd.value); renderRoad(); };
+function renderRoad() {
+  const st = new Date((localStorage.getItem("startDate")||TODAY)+"T00:00:00");
+  const days = Math.max(0, Math.floor((new Date()-st)/864e5)), mo = days/30.44;
+  const idx = mo<3?0:mo<6?1:2, ph = PH[idx];
+  const prog = Math.min(Math.max((mo-ph[3])/(ph[4]-ph[3])*100,0),100);
+  document.getElementById("rmNow").innerHTML =
+    "ปฏิบัติมาแล้ว <b>"+days+"</b> วัน (~"+mo.toFixed(1)+" เดือน)<br>ตอนนี้อยู่ระยะที่ <b>"+(idx+1)+" · "+ph[0].split(" — ")[0]+"</b>";
+  document.getElementById("rmBar").style.width = prog+"%";
+  document.getElementById("rmScore").textContent = "ความคืบหน้าในระยะนี้ "+Math.round(prog)+"%";
+  document.getElementById("phases").innerHTML = PH.map((p,i) =>
+    '<div class="phase '+(i<idx?"done":i===idx?"now":"")+'"><div class="num">'+(i<idx?"✓":i+1)+'</div><div>'+
+    '<div class="ti">'+p[0]+'</div><div class="de">'+p[1]+' · '+p[2]+'</div>'+
+    (i===idx?'<div class="st">● กำลังอยู่ในระยะนี้</div>':'')+'</div></div>').join("");
+  const avg30 = Math.round(dayList.reduce((s,k)=>s+count(k),0)/(DAYS*5)*100);
+  let wk=0; for (let i=0;i<7;i++) wk += med(dPlus(-i));
+  const g7 = [0,1,2,3,4,5,6].reduce((s,i)=>s+guilt(dPlus(-i)).length,0);
+  const a7 = recRange(7), a30 = recRange(30);
+  const refDone = [...Array(4)].filter((_,i)=>(refl(weekKey(monday(-i))).t||"").length>10).length;
+  const K = [
+    ["ศีล เฉลี่ย 30 วัน", avg30+"%", avg30>=90],
+    ["สมาธิ สัปดาห์นี้", wk+" / "+goal()+" น.", wk>=goal()],
+    ["ความกังวล 7 วัน", g7+" ครั้ง", g7<=3],
+    ["เวลาฟื้นตัว", a7!==null?a7+" น. (30 วัน: "+(a30===null?"–":a30)+")":"ยังไม่มีข้อมูล", a7!==null&&a30!==null&&a7<=a30],
+    ["สะท้อนคิด 4 สัปดาห์", refDone+" / 4", refDone>=3],
+    ["ประเมินเดือนนี้", resil(THMON)?"ทำแล้ว":"ยังไม่ได้ทำ", !!resil(THMON)]
+  ];
+  document.getElementById("kpis").innerHTML = K.map(k =>
+    '<div class="kpi"><span class="ic '+(k[2]?"ok":"no")+'">'+(k[2]?"✓":"○")+'</span><span>'+k[0]+
+    '</span><span class="vl '+(k[2]?"ok":"no")+'">'+k[1]+'</span></div>').join("");
+}
+
+/* ═══════════ 5 : ข้อมูล ═══════════ */
+function collect() {
+  const d = {};
+  for (let i=0;i<localStorage.length;i++) { const k = localStorage.key(i);
+    if (/^(log|med|ses|glt|rec|ref|res)-/.test(k) || ["startDate","weekGoal","tabOrder","lastMin"].includes(k))
+      d[k] = localStorage.getItem(k); }
+  return d;
+}
+function allDates() {
+  return [...new Set(Object.keys(collect()).filter(k=>/^(log|med|ses|glt|rec)-/.test(k)).map(k=>k.slice(4)))].sort();
+}
+function download(name, text, type) {
+  const u = URL.createObjectURL(new Blob(["\uFEFF"+text],{type}));
+  const a = document.createElement("a"); a.href=u; a.download=name; a.click(); URL.revokeObjectURL(u);
+}
+const q = s => '"'+String(s).replace(/"/g,'""')+'"';
+
+document.getElementById("expJson").onclick = () =>
+  download("practice-backup-"+TODAY+".json",
+    JSON.stringify({app:"practice-tracker",v:4,at:new Date().toISOString(),data:collect()},null,2),"application/json");
+document.getElementById("expCsv").onclick = () => {
+  let c = "วันที่,ศีล1,ศีล2,ศีล3,ศีล4,ศีล5,รวมข้อ,นาทีสมาธิ,รอบนั่ง,ครั้งที่กังวล,เหตุการณ์ลบ,เฉลี่ยฟื้นตัว(น.)\n";
+  allDates().forEach(k => { const a = load(k), r = recov(k);
+    c += [k,...a.map(v=>v?1:0),a.filter(Boolean).length,med(k),ses(k).length,guilt(k).length,
+      r.length, r.length?Math.round(r.reduce((s,x)=>s+x.m,0)/r.length):""].join(",")+"\n"; });
+  download("practice-summary-"+TODAY+".csv", c, "text/csv;charset=utf-8");
+};
+document.getElementById("expSes").onclick = () => {
+  let c = "วันที่,เวลา,นาทีที่นั่ง,เป้าหมายรอบ,ครบเวลา,โน้ต\n";
+  allDates().forEach(k => ses(k).forEach(s =>
+    c += [k,s.h,s.m,s.g,s.f?"ใช่":"ไม่",q(s.n||"")].join(",")+"\n"));
+  download("practice-sessions-"+TODAY+".csv", c, "text/csv;charset=utf-8");
+};
+document.getElementById("expRec").onclick = () => {
+  let c = "วันที่,เวลา,ประเภท,รายละเอียด,นาทีที่ใช้ฟื้นตัว\n";
+  allDates().forEach(k => {
+    guilt(k).forEach(g => c += [k,g.h,"กังวล/รู้สึกผิด",q(g.n||""),""].join(",")+"\n");
+    recov(k).forEach(r => c += [k,r.h,r.d,q(r.e),r.m].join(",")+"\n"); });
+  download("practice-events-"+TODAY+".csv", c, "text/csv;charset=utf-8");
+};
+document.getElementById("expRef").onclick = () => {
+  let c = "สัปดาห์,บันทึกสะท้อนคิด\n";
+  Object.keys(collect()).filter(k=>k.startsWith("ref-")).sort().forEach(k =>
+    c += [k.slice(4), q(refl(k.slice(4)).t||"")].join(",")+"\n");
+  c += "\nเดือน,"+AXES.map(a=>a[0]).join(",")+",เฉลี่ย\n";
+  Object.keys(collect()).filter(k=>k.startsWith("res-")).sort().forEach(k => {
+    const v = resil(k.slice(4));
+    c += [k.slice(4),...v,(v.reduce((s,x)=>s+x,0)/v.length).toFixed(2)].join(",")+"\n"; });
+  download("practice-wisdom-"+TODAY+".csv", c, "text/csv;charset=utf-8");
+};
+document.getElementById("impBtn").onclick = () => document.getElementById("file").click();
+document.getElementById("file").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { try {
+    const j = JSON.parse(r.result); if (!j.data) throw 0;
+    if (!confirm("พบข้อมูล "+Object.keys(j.data).length+" รายการ\nรวมเข้ากับข้อมูลปัจจุบัน (ทับของเดิมที่ซ้ำ) ต่อไหม?")) return;
+    Object.entries(j.data).forEach(([k,v]) => localStorage.setItem(k,v));
+    alert("นำเข้าสำเร็จ"); location.reload();
+  } catch(err) { alert("ไฟล์ไม่ถูกต้อง กรุณาเลือกไฟล์ .json ที่ดาวน์โหลดจากแอปนี้"); } };
+  r.readAsText(f); e.target.value = "";
+};
+function showInfo() {
+  const d = collect(), dates = allDates();
+  let rounds=0, mins=0, g=0, rc=0, notes=0;
+  dates.forEach(k => { const S = ses(k); rounds += S.length; notes += S.filter(x=>x.n).length;
+    mins += med(k); g += guilt(k).length; rc += recov(k).length; });
+  const refs = Object.keys(d).filter(k=>k.startsWith("ref-")).length;
+  const ress = Object.keys(d).filter(k=>k.startsWith("res-")).length;
+  document.getElementById("info").innerHTML =
+    "บันทึก <b>"+dates.length+"</b> วัน · สมาธิ <b>"+rounds+"</b> รอบ (<b>"+mins+"</b> นาที · มีโน้ต "+notes+" รอบ)<br>"+
+    "กังวล <b>"+g+"</b> ครั้ง · เหตุการณ์ลบ <b>"+rc+"</b> ครั้ง<br>"+
+    "สะท้อนคิด <b>"+refs+"</b> สัปดาห์ · ประเมิน <b>"+ress+"</b> เดือน · เป้าหมาย <b>"+goal()+"</b> นาที/สัปดาห์<br>"+
+    "ขนาดข้อมูล <b>"+(JSON.stringify(d).length/1024).toFixed(1)+" KB</b>"+
+    (dates.length ? "<br>ตั้งแต่ "+dates[0]+" ถึง "+dates[dates.length-1] : "");
+}
+
+/* ═══════════ เริ่มทำงาน ═══════════ */
+(function init() {
+  if (!localStorage.getItem("startDate")) localStorage.setItem("startDate", TODAY);
+  sd.value = localStorage.getItem("startDate");
+  applyOrder();
+  const last = +(localStorage.getItem("lastMin")||15);
+  const b = document.querySelector('#presets button[data-m="'+last+'"]');
+  if (b) setTarget(last,true); else { document.getElementById("customMin").value = last; setTarget(last,false); }
+  renderSila(); renderWeek(); renderSes(); renderRoad(); renderOrd();
+})();
+</script>
+</body>
+</html>
