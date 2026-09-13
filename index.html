@@ -2,8 +2,14 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>บันทึกการปฏิบัติ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SatiFlow</title>
+<meta name="theme-color" content="#1a7f43">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="SatiFlow">
+<meta name="description" content="บันทึกการปฏิบัติ ศีล สมาธิ ปัญญา">
 <style>
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { font-family:-apple-system,"Segoe UI","Sarabun",sans-serif; background:#f4f6f8;
@@ -11,9 +17,9 @@
   .card { background:#fff; width:100%; max-width:440px; border-radius:16px;
     padding:20px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
   h1 { font-size:18px; margin:0 0 14px; }
+  h1 small { font-size:12px; color:#9aa5b1; font-weight:400; margin-left:6px; }
   h2 { font-size:15px; margin:0 0 10px; }
   h3 { font-size:13px; margin:18px 0 8px; color:#52606d; font-weight:600; }
-  /* ---- tabs (เลื่อน + ลากสลับตำแหน่ง) ---- */
   .tabs { display:flex; gap:4px; margin-bottom:16px; background:#f1f4f6; padding:4px;
     border-radius:10px; overflow-x:auto; overflow-y:hidden; white-space:nowrap;
     -webkit-overflow-scrolling:touch; scrollbar-width:none; }
@@ -97,6 +103,7 @@
   .note { font-size:13px; color:#7b8794; line-height:1.7; background:#f8f9fa;
     border-radius:10px; padding:13px; margin-top:6px; }
   .warnbox { background:#fff4e5; color:#8a5a00; }
+  .okbox { background:#e6f6ec; color:#1a7f43; }
   textarea { width:100%; border:1px solid #cbd2d9; border-radius:10px; padding:12px;
     font-size:14px; font-family:inherit; line-height:1.7; resize:vertical; min-height:130px; color:#1f2d3d; }
   .hint { font-size:12px; color:#9aa5b1; line-height:1.8; margin:8px 0 10px; }
@@ -132,7 +139,7 @@
 </head>
 <body>
 <div class="card">
-  <h1>บันทึกการปฏิบัติ</h1>
+  <h1>SatiFlow <small>บันทึกการปฏิบัติ</small></h1>
   <div class="tabs" id="tabs">
     <button class="on" data-p="0">ภาพรวม</button>
     <button data-p="1">ศีล</button>
@@ -308,6 +315,10 @@
 
   <!-- ═════════ 5 : ข้อมูล ═════════ -->
   <div class="page" id="p5">
+    <h2>ติดตั้งแอป</h2>
+    <div class="note" id="pwaInfo">กำลังตรวจสอบ…</div>
+    <button class="big p1" id="installBtn" style="display:none;margin-top:10px">ติดตั้ง SatiFlow ลงเครื่อง</button>
+    <hr>
     <h2>จัดลำดับแท็บ</h2>
     <div class="hint">กดค้างที่แท็บด้านบน ~0.4 วินาที แล้วลากซ้าย-ขวาเพื่อสลับ<br>หรือใช้ปุ่ม ‹ › ด้านล่างนี้</div>
     <div id="ordList"></div>
@@ -324,12 +335,74 @@
     <div class="note" id="info"></div>
     <div class="note warnbox">
       ⚠️ ข้อมูลเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น ถ้าล้างแคชจะหาย<br>
-      <b>แนะนำ: ดาวน์โหลด .json ขึ้น Google Drive ทุกสิ้นเดือน</b>
+      <b>แนะนำ: ดาวน์โหลด .json ขึ้น Google Drive ทุก 7 วัน</b>
     </div>
   </div>
 </div>
 
 <script>
+/* ═══════════ PWA : manifest + ไอคอน (ฝังในไฟล์เดียว) ═══════════ */
+(function pwa() {
+  const ICON = 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">'+
+    '<rect width="512" height="512" rx="112" fill="#1a7f43"/>'+
+    '<circle cx="256" cy="256" r="168" fill="none" stroke="#ffffff" stroke-width="14" opacity=".35"/>'+
+    '<circle cx="256" cy="256" r="120" fill="none" stroke="#ffffff" stroke-width="18" opacity=".6"/>'+
+    '<circle cx="256" cy="256" r="64" fill="#ffffff"/></svg>');
+  const mf = {
+    name: "SatiFlow", short_name: "SatiFlow",
+    description: "บันทึกการปฏิบัติ ศีล สมาธิ ปัญญา",
+    start_url: ".", scope: ".", display: "standalone", orientation: "portrait",
+    background_color: "#f4f6f8", theme_color: "#1a7f43", lang: "th",
+    icons: [
+      { src: ICON, sizes: "192x192", type: "image/svg+xml", purpose: "any" },
+      { src: ICON, sizes: "512x512", type: "image/svg+xml", purpose: "any" },
+      { src: ICON, sizes: "512x512", type: "image/svg+xml", purpose: "maskable" }
+    ]
+  };
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(mf))));
+  const l = document.createElement("link");
+  l.rel = "manifest"; l.href = "data:application/json;base64," + b64;
+  document.head.appendChild(l);
+  const ai = document.createElement("link");
+  ai.rel = "apple-touch-icon"; ai.href = ICON;
+  document.head.appendChild(ai);
+  if ("serviceWorker" in navigator && location.protocol === "https:")
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+})();
+
+let deferred = null;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault(); deferred = e; refreshPwa();
+});
+window.addEventListener("appinstalled", () => { deferred = null; refreshPwa(); });
+function isStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+}
+function refreshPwa() {
+  const box = document.getElementById("pwaInfo"), btn = document.getElementById("installBtn");
+  if (isStandalone()) {
+    box.className = "note okbox";
+    box.innerHTML = "✓ กำลังใช้งานในโหมดแอปแล้ว (ไม่มีแถบเบราว์เซอร์)";
+    btn.style.display = "none"; return;
+  }
+  box.className = "note";
+  if (deferred) {
+    box.innerHTML = "เครื่องนี้ติดตั้งเป็นแอปได้ — กดปุ่มด้านล่าง";
+    btn.style.display = "block";
+  } else {
+    btn.style.display = "none";
+    box.innerHTML = /iPhone|iPad|iPod/.test(navigator.userAgent)
+      ? "<b>iPhone / iPad:</b> กดปุ่ม <b>แชร์</b> ด้านล่างของ Safari → เลื่อนหา <b>เพิ่มไปยังหน้าจอโฮม</b>"
+      : "<b>Android:</b> กดจุด 3 จุดมุมขวาบนของ Chrome → <b>ติดตั้งแอป</b><br>"+
+        "<span style='color:#9aa5b1'>ถ้ายังไม่เห็นเมนูนี้ ให้ลบไอคอนเดิมออก แล้วรีเฟรชหน้าเว็บใหม่</span>";
+  }
+}
+document.getElementById("installBtn").onclick = async () => {
+  if (!deferred) return;
+  deferred.prompt(); await deferred.userChoice; deferred = null; refreshPwa();
+};
+
 /* ═══════════ ค่าคงที่ ═══════════ */
 const RULES = ["ไม่เบียดเบียนชีวิตผู้อื่น","ไม่เอาสิ่งที่เจ้าของไม่ได้ให้",
   "ไม่ประพฤติผิดในกาม","ไม่พูดเท็จ / ไม่พูดส่อเสียด","ไม่ดื่มของมึนเมา"];
@@ -427,15 +500,12 @@ function chartRadar(cur, prev) {
 /* ═══════════ แท็บ + ลากสลับตำแหน่ง ═══════════ */
 const tabsEl = document.getElementById("tabs");
 const GAP = 4;
-
 function applyOrder() {
-  const o = J("tabOrder","null");
-  if (!o) return;
+  const o = J("tabOrder","null"); if (!o) return;
   o.forEach(p => { const b = tabsEl.querySelector('button[data-p="'+p+'"]'); if (b) tabsEl.appendChild(b); });
 }
 function saveOrder() {
-  localStorage.setItem("tabOrder",
-    JSON.stringify([...tabsEl.children].map(b => b.dataset.p)));
+  localStorage.setItem("tabOrder", JSON.stringify([...tabsEl.children].map(b => b.dataset.p)));
   renderOrd();
 }
 function openTab(btn) {
@@ -445,17 +515,16 @@ function openTab(btn) {
   document.getElementById("p"+btn.dataset.p).classList.add("on");
   const p = btn.dataset.p;
   if (p==="0") renderRoad(); if (p==="3") renderRec();
-  if (p==="4") { renderRef(); renderRes(); } if (p==="5") { showInfo(); renderOrd(); }
+  if (p==="4") { renderRef(); renderRes(); }
+  if (p==="5") { showInfo(); renderOrd(); refreshPwa(); }
   window.scrollTo(0,0);
 }
-
 let dEl=null, dragging=false, hold=null, baseX=0, startY=0, moved=false;
 function endDrag() {
   clearTimeout(hold);
   if (dragging && dEl) {
     dEl.style.transform = ""; dEl.classList.remove("drag");
-    tabsEl.classList.remove("dragging");
-    saveOrder();
+    tabsEl.classList.remove("dragging"); saveOrder();
   }
   dragging = false; dEl = null;
 }
@@ -489,7 +558,6 @@ function endDrag() {
   btn.addEventListener("pointercancel", endDrag);
   btn.addEventListener("click", e => { if (moved) e.preventDefault(); });
 });
-
 function renderOrd() {
   const w = document.getElementById("ordList"); w.innerHTML = "";
   const arr = [...tabsEl.children];
@@ -577,7 +645,6 @@ function renderGuilt() {
 let target=900, left=900, tick=null, endAt=0, wake=null, sesDay=TODAY;
 const clock = document.getElementById("clock"), tsub = document.getElementById("tsub");
 const mmss = s => String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
-
 function setTarget(min, fromPreset) {
   if (tick) { alert('กำลังจับเวลาอยู่ — กด "จบ & บันทึก" ก่อนเปลี่ยนเวลา'); return false; }
   target = min*60; left = target; clock.textContent = mmss(left);
@@ -595,7 +662,6 @@ document.getElementById("setCustom").onclick = () => {
   setTarget(v,false);
 };
 document.getElementById("customMin").onkeydown = e => { if (e.key==="Enter") document.getElementById("setCustom").click(); };
-
 const gIn = document.getElementById("wGoal");
 gIn.value = goal();
 function setGoal(v) {
@@ -605,7 +671,6 @@ function setGoal(v) {
 }
 gIn.onchange = () => setGoal(+gIn.value);
 document.querySelectorAll("#goalQuick button").forEach(b => b.onclick = () => setGoal(+b.dataset.g));
-
 function bell() { try {
   const ac = new (window.AudioContext||window.webkitAudioContext)();
   [880,1320].forEach((f,i) => { const o=ac.createOscillator(), g=ac.createGain();
@@ -618,7 +683,6 @@ async function keepAwake(on) { try {
   if (on && "wakeLock" in navigator) wake = await navigator.wakeLock.request("screen");
   else if (wake) { wake.release(); wake = null; }
 } catch(e) {} }
-
 document.getElementById("goBtn").onclick = function() {
   if (tick) { clearInterval(tick); tick=null; keepAwake(false);
     clock.classList.remove("run"); this.textContent="เริ่มต่อ";
@@ -632,7 +696,6 @@ document.getElementById("goBtn").onclick = function() {
   }, 250);
 };
 document.getElementById("stopBtn").onclick = () => finish(false);
-
 function finish(done) {
   if (tick) { clearInterval(tick); tick=null; }
   keepAwake(false);
@@ -772,7 +835,6 @@ function storeRef() { setRef(curWeek(), {t:refEl.value.trim(),
   at:new Date().toLocaleString("th-TH",{dateStyle:"short",timeStyle:"short"})}); }
 document.getElementById("refSave").onclick = () => { storeRef(); renderRef(); alert("บันทึกแล้ว"); };
 refEl.onblur = () => { if (refEl.value.trim()) storeRef(); };
-
 let mKey = THMON;
 const slWrap = document.getElementById("sliders");
 const sls = AXES.map((a,i) => {
@@ -855,29 +917,28 @@ function download(name, text, type) {
   const a = document.createElement("a"); a.href=u; a.download=name; a.click(); URL.revokeObjectURL(u);
 }
 const q = s => '"'+String(s).replace(/"/g,'""')+'"';
-
 document.getElementById("expJson").onclick = () =>
-  download("practice-backup-"+TODAY+".json",
-    JSON.stringify({app:"practice-tracker",v:4,at:new Date().toISOString(),data:collect()},null,2),"application/json");
+  download("satiflow-backup-"+TODAY+".json",
+    JSON.stringify({app:"SatiFlow",v:5,at:new Date().toISOString(),data:collect()},null,2),"application/json");
 document.getElementById("expCsv").onclick = () => {
   let c = "วันที่,ศีล1,ศีล2,ศีล3,ศีล4,ศีล5,รวมข้อ,นาทีสมาธิ,รอบนั่ง,ครั้งที่กังวล,เหตุการณ์ลบ,เฉลี่ยฟื้นตัว(น.)\n";
   allDates().forEach(k => { const a = load(k), r = recov(k);
     c += [k,...a.map(v=>v?1:0),a.filter(Boolean).length,med(k),ses(k).length,guilt(k).length,
       r.length, r.length?Math.round(r.reduce((s,x)=>s+x.m,0)/r.length):""].join(",")+"\n"; });
-  download("practice-summary-"+TODAY+".csv", c, "text/csv;charset=utf-8");
+  download("satiflow-summary-"+TODAY+".csv", c, "text/csv;charset=utf-8");
 };
 document.getElementById("expSes").onclick = () => {
   let c = "วันที่,เวลา,นาทีที่นั่ง,เป้าหมายรอบ,ครบเวลา,โน้ต\n";
   allDates().forEach(k => ses(k).forEach(s =>
     c += [k,s.h,s.m,s.g,s.f?"ใช่":"ไม่",q(s.n||"")].join(",")+"\n"));
-  download("practice-sessions-"+TODAY+".csv", c, "text/csv;charset=utf-8");
+  download("satiflow-sessions-"+TODAY+".csv", c, "text/csv;charset=utf-8");
 };
 document.getElementById("expRec").onclick = () => {
   let c = "วันที่,เวลา,ประเภท,รายละเอียด,นาทีที่ใช้ฟื้นตัว\n";
   allDates().forEach(k => {
     guilt(k).forEach(g => c += [k,g.h,"กังวล/รู้สึกผิด",q(g.n||""),""].join(",")+"\n");
     recov(k).forEach(r => c += [k,r.h,r.d,q(r.e),r.m].join(",")+"\n"); });
-  download("practice-events-"+TODAY+".csv", c, "text/csv;charset=utf-8");
+  download("satiflow-events-"+TODAY+".csv", c, "text/csv;charset=utf-8");
 };
 document.getElementById("expRef").onclick = () => {
   let c = "สัปดาห์,บันทึกสะท้อนคิด\n";
@@ -887,7 +948,7 @@ document.getElementById("expRef").onclick = () => {
   Object.keys(collect()).filter(k=>k.startsWith("res-")).sort().forEach(k => {
     const v = resil(k.slice(4));
     c += [k.slice(4),...v,(v.reduce((s,x)=>s+x,0)/v.length).toFixed(2)].join(",")+"\n"; });
-  download("practice-wisdom-"+TODAY+".csv", c, "text/csv;charset=utf-8");
+  download("satiflow-wisdom-"+TODAY+".csv", c, "text/csv;charset=utf-8");
 };
 document.getElementById("impBtn").onclick = () => document.getElementById("file").click();
 document.getElementById("file").onchange = e => {
@@ -924,7 +985,7 @@ function showInfo() {
   const last = +(localStorage.getItem("lastMin")||15);
   const b = document.querySelector('#presets button[data-m="'+last+'"]');
   if (b) setTarget(last,true); else { document.getElementById("customMin").value = last; setTarget(last,false); }
-  renderSila(); renderWeek(); renderSes(); renderRoad(); renderOrd();
+  renderSila(); renderWeek(); renderSes(); renderRoad(); renderOrd(); refreshPwa();
 })();
 </script>
 </body>
