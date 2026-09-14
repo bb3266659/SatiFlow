@@ -135,6 +135,17 @@
   .ord button { border:1px solid #cbd2d9; background:#fff; border-radius:7px; width:34px;
     height:32px; font-size:15px; cursor:pointer; color:#52606d; }
   .ord button:disabled { opacity:.3; cursor:default; }
+  .life { background:#fafbfc; border-radius:14px; padding:14px 10px 8px; }
+  .life .lead { text-align:center; font-size:13px; color:#52606d; }
+  .life .big-n { text-align:center; font-size:34px; font-weight:700; color:#e08a1e; line-height:1.2; }
+  .life .sub2 { text-align:center; font-size:12px; color:#9aa5b1; }
+  .life .ends { display:flex; justify-content:space-between; padding:0 16px; font-size:12px; color:#7b8794; margin-top:-8px; }
+  .life .warn2 { text-align:center; font-size:12px; color:#7b8794; line-height:1.8; margin-top:10px; }
+  .life .warn2 b { color:#1a7f43; }
+  .moods { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .moods button { flex:1 1 30%; border:1px solid #cbd2d9; background:#fff; color:#52606d;
+    border-radius:8px; padding:9px 4px; font-size:13px; cursor:pointer; font-family:inherit; }
+  .moods button.on { background:#e6f6ec; border-color:#1a7f43; color:#1a7f43; font-weight:600; }
 </style>
 </head>
 <body>
@@ -146,11 +157,14 @@
     <button data-p="2">สมาธิ</button>
     <button data-p="3">อารมณ์</button>
     <button data-p="4">ปัญญา</button>
+    <button data-p="6">ไดอารี่</button>
     <button data-p="5">ข้อมูล</button>
   </div>
 
   <!-- ═════════ 0 : ภาพรวม ═════════ -->
   <div class="page on" id="p0">
+    <div class="life" id="lifeBox"></div>
+    <hr>
     <div class="row">
       <span class="lbl">เริ่มปฏิบัติ</span>
       <input type="date" id="startDate">
@@ -313,11 +327,45 @@
     <div class="sum" id="mSum"></div>
   </div>
 
+  <!-- ═════════ 6 : ไดอารี่ ═════════ -->
+  <div class="page" id="p6">
+    <div class="head">
+      <button class="ghost" id="dPrev">‹</button>
+      <div class="date" id="dLabel"></div>
+      <button class="ghost" id="dNext">›</button>
+    </div>
+    <div class="hint">เขียนเมื่ออยากเขียน — ไม่ต้องทุกวัน วันไหนว่างเปล่าก็ไม่เป็นไร</div>
+    <div class="moods" id="dMood"></div>
+    <textarea id="dText" placeholder="วันนี้เกิดอะไรขึ้น รู้สึกยังไง…"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="big p1" id="dSave" style="margin:0">บันทึก</button>
+      <button class="ghost" id="dToday">วันนี้</button>
+    </div>
+    <div class="sum" id="dInfo"></div>
+    <hr>
+    <h2>บันทึกล่าสุด</h2>
+    <div id="dList"></div>
+  </div>
+
   <!-- ═════════ 5 : ข้อมูล ═════════ -->
   <div class="page" id="p5">
     <h2>ติดตั้งแอป</h2>
     <div class="note" id="pwaInfo">กำลังตรวจสอบ…</div>
     <button class="big p1" id="installBtn" style="display:none;margin-top:10px">ติดตั้ง SatiFlow ลงเครื่อง</button>
+    <hr>
+    <h2>ชีวิตของฉัน</h2>
+    <div class="row"><span class="lbl">วันเกิด</span><input type="date" id="birthDate"></div>
+    <div class="row"><span class="lbl">เพศ</span>
+      <select id="gender">
+        <option value="m">ชาย — 3,900 สัปดาห์</option>
+        <option value="f">หญิง — 4,100 สัปดาห์</option>
+      </select>
+    </div>
+    <div class="row"><span class="lbl">กำหนดเอง</span>
+      <input type="number" id="lifeWeeks" min="500" max="6000" placeholder="เว้นว่าง = ใช้ค่าตามเพศ">
+      <span class="lbl">สัปดาห์</span>
+    </div>
+    <div class="note" id="lifeInfo"></div>
     <hr>
     <h2>จัดลำดับแท็บ</h2>
     <div class="hint">กดค้างที่แท็บด้านบน ~0.4 วินาที แล้วลากซ้าย-ขวาเพื่อสลับ<br>หรือใช้ปุ่ม ‹ › ด้านล่างนี้</div>
@@ -330,6 +378,7 @@
     <button class="big p2" id="expSes">ประวัติการนั่งสมาธิ (.csv)</button>
     <button class="big p2" id="expRec">เหตุการณ์ &amp; เวลาฟื้นตัว (.csv)</button>
     <button class="big p2" id="expRef">บันทึกสะท้อนคิด + ประเมิน (.csv)</button>
+    <button class="big p2" id="expDia">ไดอารี่ (.csv)</button>
     <button class="big p3" id="impBtn">นำไฟล์สำรองกลับเข้ามา</button>
     <input type="file" id="file" accept=".json" style="display:none">
     <div class="note" id="info"></div>
@@ -414,7 +463,7 @@ const AXES = [
   ["ฟื้นตัวไว","กลับสู่ปกติได้เร็วหลังกระทบ"]
 ];
 const DAYS = 30;
-const TABNAME = {"0":"ภาพรวม","1":"ศีล","2":"สมาธิ","3":"อารมณ์","4":"ปัญญา","5":"ข้อมูล"};
+const TABNAME = {"0":"ภาพรวม","1":"ศีล","2":"สมาธิ","3":"อารมณ์","4":"ปัญญา","5":"ข้อมูล","6":"ไดอารี่"};
 
 /* ═══════════ วันที่ ═══════════ */
 const fmt = d => d.toLocaleDateString("sv-SE");
@@ -503,6 +552,8 @@ const GAP = 4;
 function applyOrder() {
   const o = J("tabOrder","null"); if (!o) return;
   o.forEach(p => { const b = tabsEl.querySelector('button[data-p="'+p+'"]'); if (b) tabsEl.appendChild(b); });
+  const miss = [...tabsEl.children].filter(b => o.indexOf(b.dataset.p) < 0);
+  miss.forEach(b => tabsEl.appendChild(b));
 }
 function saveOrder() {
   localStorage.setItem("tabOrder", JSON.stringify([...tabsEl.children].map(b => b.dataset.p)));
@@ -514,9 +565,11 @@ function openTab(btn) {
   btn.classList.add("on");
   document.getElementById("p"+btn.dataset.p).classList.add("on");
   const p = btn.dataset.p;
-  if (p==="0") renderRoad(); if (p==="3") renderRec();
+  if (p==="0") { renderRoad(); renderLife(); }
+  if (p==="3") renderRec();
   if (p==="4") { renderRef(); renderRes(); }
-  if (p==="5") { showInfo(); renderOrd(); refreshPwa(); }
+  if (p==="6") renderDia();
+  if (p==="5") { showInfo(); renderOrd(); refreshPwa(); renderLifeCfg(); }
   window.scrollTo(0,0);
 }
 let dEl=null, dragging=false, hold=null, baseX=0, startY=0, moved=false;
@@ -573,7 +626,7 @@ function renderOrd() {
 }
 document.getElementById("ordReset").onclick = () => {
   localStorage.removeItem("tabOrder");
-  ["0","1","2","3","4","5"].forEach(p => tabsEl.appendChild(tabsEl.querySelector('button[data-p="'+p+'"]')));
+  ["0","1","2","3","4","6","5"].forEach(p => tabsEl.appendChild(tabsEl.querySelector('button[data-p="'+p+'"]')));
   renderOrd();
 };
 
@@ -901,16 +954,125 @@ function renderRoad() {
     '</span><span class="vl '+(k[2]?"ok":"no")+'">'+k[1]+'</span></div>').join("");
 }
 
+/* ═══════════ นาฬิกาชีวิต ═══════════ */
+const GW = { m:3900, f:4100 };
+const bDate = () => localStorage.getItem("birthDate") || "";
+const bSex  = () => localStorage.getItem("gender") || "m";
+const lifeW = () => +(localStorage.getItem("lifeWeeks") || GW[bSex()]);
+const nfm = n => n.toLocaleString("en-US");
+function lsKeys(pre) { const a=[];
+  for (let i=0;i<localStorage.length;i++) { const k=localStorage.key(i); if (k.indexOf(pre)===0) a.push(k); }
+  return a; }
+function polar(cx,cy,r,deg) { const a=deg*Math.PI/180;
+  return [(cx+r*Math.cos(a)).toFixed(1), (cy+r*Math.sin(a)).toFixed(1)]; }
+function arcD(cx,cy,r,a0,a1) { const [x0,y0]=polar(cx,cy,r,a0), [x1,y1]=polar(cx,cy,r,a1);
+  return "M"+x0+" "+y0+" A"+r+" "+r+" 0 "+(Math.abs(a1-a0)>180?1:0)+" 1 "+x1+" "+y1; }
+function lifeSVG(pct) {
+  const cx=150, cy=152, r=104, sw=34, e=180+180*Math.min(Math.max(pct,0),100)/100;
+  const [mx,my]=polar(cx,cy,r,e);
+  let s='<path d="'+arcD(cx,cy,r+27,181,359)+'" fill="none" stroke="#cbd2d9" stroke-width="1.5" stroke-dasharray="4 5"/>';
+  s+='<path d="'+arcD(cx,cy,r,180,360)+'" fill="none" stroke="#c9d0d8" stroke-width="'+sw+'"/>';
+  if (pct>0.4) s+='<path d="'+arcD(cx,cy,r,180,e)+'" fill="none" stroke="#f5a623" stroke-width="'+sw+'"/>';
+  s+='<text x="'+cx+'" y="'+(cy-38)+'" text-anchor="middle" font-size="12" fill="#7b8794">ผ่านไปแล้ว</text>';
+  s+='<text x="'+cx+'" y="'+(cy-6)+'" text-anchor="middle" font-size="31" font-weight="700" fill="#1f2d3d">'+pct.toFixed(1)+'%</text>';
+  s+='<circle cx="'+mx+'" cy="'+my+'" r="11" fill="#fff" stroke="#1f2d3d" stroke-width="2"/>';
+  s+='<circle cx="'+mx+'" cy="'+my+'" r="6" fill="#f5a623"/>';
+  return '<svg viewBox="0 0 300 174" width="100%">'+s+'</svg>';
+}
+function renderLife() {
+  const box = document.getElementById("lifeBox"); if (!box) return;
+  if (!bDate()) { box.innerHTML = '<div class="warn2">ยังไม่ได้ตั้งวันเกิด<br>ไปที่แท็บ <b>ข้อมูล</b> → <b>ชีวิตของฉัน</b> เพื่อตั้งค่า</div>'; return; }
+  const tot = lifeW(), ms = Date.now()-new Date(bDate()+"T00:00:00").getTime();
+  const lived = ms/6048e5, left = Math.max(tot-lived,0), pct = Math.min(lived/tot*100,100);
+  const leftD = Math.max(Math.round(tot*7-ms/864e5),0);
+  box.innerHTML =
+    '<div class="lead">ฉันมีชีวิตเหลืออีก</div>'+
+    '<div class="big-n">'+nfm(Math.floor(left))+' <span style="font-size:19px">สัปดาห์</span></div>'+
+    '<div class="sub2">≈ '+nfm(leftD)+' วัน · '+(left/52.18).toFixed(1)+' ปี</div>'+
+    lifeSVG(pct)+
+    '<div class="ends"><span>เกิด</span><span>ตาย</span></div>'+
+    '<div class="warn2">อายุ '+(lived/52.18).toFixed(1)+' ปี · ใช้ไปแล้ว '+nfm(Math.floor(lived))+' จาก '+nfm(tot)+' สัปดาห์<br>'+
+    '<b>สัปดาห์นี้คือ 1 ใน '+nfm(Math.floor(left))+' ที่เหลืออยู่</b></div>';
+}
+function renderLifeCfg() {
+  document.getElementById("birthDate").value = bDate();
+  document.getElementById("gender").value = bSex();
+  document.getElementById("lifeWeeks").value = localStorage.getItem("lifeWeeks") || "";
+  document.getElementById("lifeInfo").innerHTML = bDate()
+    ? "ช่วงชีวิตที่ใช้คำนวณ <b>"+nfm(lifeW())+"</b> สัปดาห์ (~"+(lifeW()/52.18).toFixed(0)+" ปี)<br>"+
+      "<span style='color:#9aa5b1'>ตัวเลขนี้เป็นค่าอ้างอิงเพื่อเตือนใจเรื่องเวลา ไม่ใช่การทำนาย</span>"
+    : "ตั้งวันเกิดเพื่อดูนาฬิกาชีวิตในแท็บภาพรวม";
+}
+document.getElementById("birthDate").onchange = e => { localStorage.setItem("birthDate", e.target.value); renderLifeCfg(); renderLife(); };
+document.getElementById("gender").onchange = e => { localStorage.setItem("gender", e.target.value); renderLifeCfg(); renderLife(); };
+document.getElementById("lifeWeeks").onchange = e => {
+  const v = Math.round(+e.target.value);
+  if (!e.target.value.trim()) localStorage.removeItem("lifeWeeks");
+  else if (!v||v<500||v>6000) alert("กรุณาใส่ 500–6000 สัปดาห์");
+  else localStorage.setItem("lifeWeeks", v);
+  renderLifeCfg(); renderLife();
+};
+
+/* ═══════════ 6 : ไดอารี่ ═══════════ */
+const DM = ["😄 ดีมาก","🙂 ดี","😐 เฉย ๆ","😕 หนัก","😣 แย่"];
+const dia = k => J("dia-"+k, '{"t":"","m":""}');
+function setDia(k,o) { if (!o.t && !o.m) localStorage.removeItem("dia-"+k);
+  else localStorage.setItem("dia-"+k, JSON.stringify(o)); }
+function stamp(o) { o.at = new Date().toLocaleString("th-TH",{dateStyle:"short",timeStyle:"short"}); }
+let dKey = TODAY;
+const dText = document.getElementById("dText"), dMoodWrap = document.getElementById("dMood");
+DM.forEach(m => { const b = document.createElement("button");
+  b.dataset.m = m; b.textContent = m;
+  b.onclick = () => { const o = dia(dKey); o.t = dText.value.trim();
+    o.m = (o.m===m ? "" : m); stamp(o); setDia(dKey,o); renderDia(); };
+  dMoodWrap.appendChild(b); });
+function saveDia() { const o = dia(dKey); o.t = dText.value.trim(); stamp(o); setDia(dKey,o); }
+function flushDia() { const o = dia(dKey); if (dText.value.trim() !== (o.t||"")) saveDia(); }
+dText.onblur = () => { flushDia(); };
+document.getElementById("dSave").onclick = () => { saveDia(); renderDia(); alert("บันทึกแล้ว"); };
+document.getElementById("dToday").onclick = () => { flushDia(); dKey = TODAY; renderDia(); };
+function shiftDia(n) { flushDia(); const d = new Date(dKey+"T00:00:00"); d.setDate(d.getDate()+n);
+  const k = fmt(d); if (k>TODAY) return; dKey = k; renderDia(); }
+document.getElementById("dPrev").onclick = () => shiftDia(-1);
+document.getElementById("dNext").onclick = () => shiftDia(1);
+function renderDia() {
+  const o = dia(dKey);
+  document.getElementById("dLabel").innerHTML = (dKey===TODAY?"<b>วันนี้</b> · ":"")+
+    thDate(dKey,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  dText.value = o.t || "";
+  [...dMoodWrap.children].forEach(b => b.classList.toggle("on", b.dataset.m===o.m));
+  document.getElementById("dNext").style.opacity = dKey>=TODAY ? .4 : 1;
+  const keys = lsKeys("dia-"); let mon=0, l30=0;
+  keys.forEach(k => { const d = k.slice(4);
+    if (d.slice(0,7)===THMON) mon++; if (d>=dPlus(-29)) l30++; });
+  document.getElementById("dInfo").innerHTML = (o.at ? "บันทึกล่าสุด "+o.at+" · " : "ยังไม่มีบันทึกของวันที่เลือก · ")+
+    "เขียนแล้ว <b>"+keys.length+"</b> วัน · เดือนนี้ <b>"+mon+"</b> · 30 วันล่าสุด <b>"+l30+"</b>";
+  const w = document.getElementById("dList"); w.innerHTML = "";
+  const rows = keys.map(k=>k.slice(4)).sort().reverse().slice(0,20);
+  if (!rows.length) { w.innerHTML = '<div class="empty">ยังไม่มีบันทึก — เขียนเมื่อไหร่ก็ได้ ไม่ต้องทุกวัน</div>'; return; }
+  rows.forEach(k => { const e = dia(k), r = document.createElement("div");
+    r.className = "item"; r.style.cursor = "pointer";
+    r.innerHTML = '<span class="tm">'+thDate(k)+'</span><span class="tx">'+
+      (e.t ? e.t.replace(/</g,"&lt;").slice(0,60) : '<i style="color:#b7c0c8">ไม่มีข้อความ</i>')+'</span>'+
+      (e.m ? '<span class="tag mood">'+e.m+'</span>' : '');
+    r.onclick = () => { flushDia(); dKey = k; renderDia(); window.scrollTo(0,0); };
+    const d = document.createElement("button"); d.className = "del"; d.textContent = "×";
+    d.onclick = ev => { ev.stopPropagation(); if (!confirm("ลบบันทึกวันที่ "+thDate(k)+"?")) return;
+      localStorage.removeItem("dia-"+k); if (dKey===k) dText.value = ""; renderDia(); };
+    r.appendChild(d); w.appendChild(r); });
+}
+
 /* ═══════════ 5 : ข้อมูล ═══════════ */
 function collect() {
   const d = {};
   for (let i=0;i<localStorage.length;i++) { const k = localStorage.key(i);
-    if (/^(log|med|ses|glt|rec|ref|res)-/.test(k) || ["startDate","weekGoal","tabOrder","lastMin"].includes(k))
+    if (/^(log|med|ses|glt|rec|ref|res|dia)-/.test(k) ||
+        ["startDate","weekGoal","tabOrder","lastMin","birthDate","gender","lifeWeeks"].includes(k))
       d[k] = localStorage.getItem(k); }
   return d;
 }
 function allDates() {
-  return [...new Set(Object.keys(collect()).filter(k=>/^(log|med|ses|glt|rec)-/.test(k)).map(k=>k.slice(4)))].sort();
+  return [...new Set(Object.keys(collect()).filter(k=>/^(log|med|ses|glt|rec|dia)-/.test(k)).map(k=>k.slice(4)))].sort();
 }
 function download(name, text, type) {
   const u = URL.createObjectURL(new Blob(["\uFEFF"+text],{type}));
@@ -919,12 +1081,13 @@ function download(name, text, type) {
 const q = s => '"'+String(s).replace(/"/g,'""')+'"';
 document.getElementById("expJson").onclick = () =>
   download("satiflow-backup-"+TODAY+".json",
-    JSON.stringify({app:"SatiFlow",v:5,at:new Date().toISOString(),data:collect()},null,2),"application/json");
+    JSON.stringify({app:"SatiFlow",v:6,at:new Date().toISOString(),data:collect()},null,2),"application/json");
 document.getElementById("expCsv").onclick = () => {
-  let c = "วันที่,ศีล1,ศีล2,ศีล3,ศีล4,ศีล5,รวมข้อ,นาทีสมาธิ,รอบนั่ง,ครั้งที่กังวล,เหตุการณ์ลบ,เฉลี่ยฟื้นตัว(น.)\n";
-  allDates().forEach(k => { const a = load(k), r = recov(k);
+  let c = "วันที่,ศีล1,ศีล2,ศีล3,ศีล4,ศีล5,รวมข้อ,นาทีสมาธิ,รอบนั่ง,ครั้งที่กังวล,เหตุการณ์ลบ,เฉลี่ยฟื้นตัว(น.),ไดอารี่\n";
+  allDates().forEach(k => { const a = load(k), r = recov(k), e = dia(k);
     c += [k,...a.map(v=>v?1:0),a.filter(Boolean).length,med(k),ses(k).length,guilt(k).length,
-      r.length, r.length?Math.round(r.reduce((s,x)=>s+x.m,0)/r.length):""].join(",")+"\n"; });
+      r.length, r.length?Math.round(r.reduce((s,x)=>s+x.m,0)/r.length):"",
+      (e.t||e.m)?"มี":""].join(",")+"\n"; });
   download("satiflow-summary-"+TODAY+".csv", c, "text/csv;charset=utf-8");
 };
 document.getElementById("expSes").onclick = () => {
@@ -950,6 +1113,12 @@ document.getElementById("expRef").onclick = () => {
     c += [k.slice(4),...v,(v.reduce((s,x)=>s+x,0)/v.length).toFixed(2)].join(",")+"\n"; });
   download("satiflow-wisdom-"+TODAY+".csv", c, "text/csv;charset=utf-8");
 };
+document.getElementById("expDia").onclick = () => {
+  let c = "วันที่,อารมณ์,บันทึก\n";
+  lsKeys("dia-").map(k=>k.slice(4)).sort().forEach(k => {
+    const e = dia(k); c += [k, q(e.m||""), q(e.t||"")].join(",")+"\n"; });
+  download("satiflow-diary-"+TODAY+".csv", c, "text/csv;charset=utf-8");
+};
 document.getElementById("impBtn").onclick = () => document.getElementById("file").click();
 document.getElementById("file").onchange = e => {
   const f = e.target.files[0]; if (!f) return;
@@ -969,9 +1138,10 @@ function showInfo() {
     mins += med(k); g += guilt(k).length; rc += recov(k).length; });
   const refs = Object.keys(d).filter(k=>k.startsWith("ref-")).length;
   const ress = Object.keys(d).filter(k=>k.startsWith("res-")).length;
+  const dias = Object.keys(d).filter(k=>k.startsWith("dia-")).length;
   document.getElementById("info").innerHTML =
     "บันทึก <b>"+dates.length+"</b> วัน · สมาธิ <b>"+rounds+"</b> รอบ (<b>"+mins+"</b> นาที · มีโน้ต "+notes+" รอบ)<br>"+
-    "กังวล <b>"+g+"</b> ครั้ง · เหตุการณ์ลบ <b>"+rc+"</b> ครั้ง<br>"+
+    "กังวล <b>"+g+"</b> ครั้ง · เหตุการณ์ลบ <b>"+rc+"</b> ครั้ง · ไดอารี่ <b>"+dias+"</b> วัน<br>"+
     "สะท้อนคิด <b>"+refs+"</b> สัปดาห์ · ประเมิน <b>"+ress+"</b> เดือน · เป้าหมาย <b>"+goal()+"</b> นาที/สัปดาห์<br>"+
     "ขนาดข้อมูล <b>"+(JSON.stringify(d).length/1024).toFixed(1)+" KB</b>"+
     (dates.length ? "<br>ตั้งแต่ "+dates[0]+" ถึง "+dates[dates.length-1] : "");
@@ -986,6 +1156,7 @@ function showInfo() {
   const b = document.querySelector('#presets button[data-m="'+last+'"]');
   if (b) setTarget(last,true); else { document.getElementById("customMin").value = last; setTarget(last,false); }
   renderSila(); renderWeek(); renderSes(); renderRoad(); renderOrd(); refreshPwa();
+  renderLifeCfg(); renderLife(); renderDia();
 })();
 </script>
 </body>

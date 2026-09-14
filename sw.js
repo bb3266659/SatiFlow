@@ -1,4 +1,4 @@
-const CACHE = "satiflow-v5";
+const CACHE = "satiflow-v6";
 const ASSETS = ["./", "./index.html"];
 
 self.addEventListener("install", e => {
